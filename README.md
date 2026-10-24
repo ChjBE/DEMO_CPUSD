@@ -1,1 +1,1 @@
-# DEMO_LLCPU
+# DEMO_CPUSD
