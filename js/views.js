@@ -236,7 +236,7 @@ const V = {
             `</div>` +
             `</div>` +
 
-            `<h2>Công thức tính toán chuẩn học thuật</h2>` +
+            `<h2>Công thức tính toán</h2>` +
             `<div class="sc"><table>` +
             `<tr><th>Chỉ số<th>Ý nghĩa giáo trình<th>Công thức áp dụng</tr>` +
             `<tr><td><b>Thời gian quay vòng (TAT)</b><td>Tổng thời gian từ khi tiến trình đến đến khi hoàn tất<td><code>Turnaround Time = Completion Time - Arrival Time</code></td></tr>` +
