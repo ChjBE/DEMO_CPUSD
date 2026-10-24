@@ -1,0 +1,2622 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>CPU Scheduling Simulator</title>
+    <style>
+        :root {
+            --bg: #f4f7fc;
+            --sf: #fff;
+            --tx: #0f1e3d;
+            --mu: #5f6c85;
+            --ac: #2563eb;
+            --bt: #2563eb;
+            --bd: #e2e8f3;
+            --ac2: #eaf1ff;
+            --nv: rgba(255, 255, 255, .88);
+            --ok: #15803d;
+            --okbg: #e6f6ec;
+            --hi: #c2570c;
+            --er: #c42b1c;
+            --sh: 0 1px 2px rgba(15, 30, 61, .04), 0 4px 14px rgba(15, 30, 61, .04);
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            color-scheme: light
+        }
+
+        @media(prefers-color-scheme:dark) {
+            :root:not([data-theme=light]) {
+                --bg: #0b1220;
+                --sf: #131c2e;
+                --tx: #e6ecf8;
+                --mu: #94a3bf;
+                --ac: #6aa1ff;
+                --bd: #243049;
+                --ac2: #172a4d;
+                --nv: rgba(19, 28, 46, .88);
+                --ok: #4ade80;
+                --okbg: #12301f;
+                --hi: #fb923c;
+                --er: #f87171;
+                --sh: 0 1px 2px rgba(0, 0, 0, .3);
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme=dark] {
+            --bg: #0b1220;
+            --sf: #131c2e;
+            --tx: #e6ecf8;
+            --mu: #94a3bf;
+            --ac: #6aa1ff;
+            --bd: #243049;
+            --ac2: #172a4d;
+            --nv: rgba(19, 28, 46, .88);
+            --ok: #4ade80;
+            --okbg: #12301f;
+            --hi: #fb923c;
+            --er: #f87171;
+            --sh: 0 1px 2px rgba(0, 0, 0, .3);
+            color-scheme: dark
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        [hidden] {
+            display: none !important
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--tx);
+            font: 15px/1.6 Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+        }
+
+        /* ---------- Icon ---------- */
+        .i {
+            display: block;
+            flex: none
+        }
+
+        .bd {
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--ac2);
+            color: var(--ac);
+            margin: 0 auto 12px
+        }
+
+        .bd.g {
+            background: var(--okbg);
+            color: var(--ok)
+        }
+
+        /* ---------- Nav ---------- */
+        .nav {
+            position: sticky;
+            top: env(safe-area-inset-top, 0px);
+            z-index: 50;
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            height: 64px;
+            padding: 0 clamp(16px, 4vw, 48px);
+            background: var(--nv);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--bd);
+            overflow-x: auto;
+            scrollbar-width: none
+        }
+
+        .nav::-webkit-scrollbar {
+            display: none
+        }
+
+        .lg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 28px;
+            color: var(--ac);
+            white-space: nowrap
+        }
+
+        .nav b {
+            color: var(--tx);
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -.01em
+        }
+
+        .nav button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            height: 64px;
+            border: 0;
+            background: none;
+            color: var(--tx);
+            padding: 0 14px;
+            font: inherit;
+            font-size: 14.5px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: color .15s
+        }
+
+        .nav button:hover {
+            color: var(--ac)
+        }
+
+        .nav button.on {
+            color: var(--ac);
+            font-weight: 600
+        }
+
+        .nav button.on::after {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+            background: var(--ac)
+        }
+
+        /* ---------- Layout ---------- */
+        .pg {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 32px 20px 48px
+        }
+
+        h1 {
+            font-size: 30px;
+            margin: 0 0 8px;
+            letter-spacing: -.02em;
+            line-height: 1.2
+        }
+
+        h2 {
+            font-size: 19px;
+            margin: 32px 0 14px;
+            letter-spacing: -.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h3 {
+            margin: 0 0 8px;
+            font-size: 16px
+        }
+
+        .mu {
+            color: var(--mu)
+        }
+
+        .card {
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: var(--sh)
+        }
+
+        .card p {
+            margin: 0 0 10px
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px
+        }
+
+        .fc {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 24px 20px 22px
+        }
+
+        .fc h3 {
+            margin: 2px 0 6px;
+            font-size: 16px
+        }
+
+        .fc p {
+            flex: 1;
+            max-width: 22ch;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0 0 16px
+        }
+
+        /* ---------- Algorithm Cards Grid (Đồng đều, không xê dịch) ---------- */
+        .alg-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .card.alg-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 20px;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+
+        .card.alg-card:hover {
+            box-shadow: 0 6px 20px rgba(15, 30, 61, .08);
+        }
+
+        .alg-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--bd);
+        }
+
+        .alg-head h3 {
+            margin: 0 0 4px;
+            font-size: 17px;
+            color: var(--tx);
+            font-weight: 700;
+        }
+
+        .alg-mode {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--mu);
+        }
+
+        .alg-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 600;
+            background: var(--ac2);
+            color: var(--ac);
+            white-space: nowrap;
+        }
+
+        .alg-body {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .alg-desc {
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: var(--tx);
+            margin: 0 0 14px;
+            flex: 0 0 auto;
+        }
+
+        .alg-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex: 1 1 auto;
+        }
+
+        .alg-box {
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            background: var(--bg);
+            border: 1px solid var(--bd);
+        }
+
+        .alg-box.ok-box {
+            border-left: 3.5px solid var(--ok);
+        }
+
+        .alg-box.over-box {
+            border-left: 3.5px solid var(--hi);
+        }
+
+        .alg-box b {
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        .alg-footer {
+            margin-top: auto;
+            padding-top: 14px;
+            border-top: 1px solid var(--bd);
+        }
+
+        .alg-footer .bt {
+            width: 100%;
+        }
+
+        /* ---------- Buttons & fields ---------- */
+        .bt,
+        button.bt {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--bt);
+            color: #fff;
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: filter .15s, background .15s
+        }
+
+        .bt:hover {
+            filter: brightness(1.08)
+        }
+
+        .bt.g {
+            background: var(--ac2);
+            color: var(--ac)
+        }
+
+        .bt.sm {
+            padding: 6px 14px;
+            font-size: 13px
+        }
+
+        .bt.x {
+            padding: 6px 8px
+        }
+
+        .bt:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid var(--ac);
+            outline-offset: 2px
+        }
+
+        input,
+        select,
+        textarea {
+            font: inherit;
+            background: var(--sf);
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            padding: 7px 10px;
+            max-width: 100%
+        }
+
+        table input {
+            width: 64px
+        }
+
+        .bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin: 14px 0
+        }
+
+        .sc {
+            overflow-x: auto;
+            scrollbar-width: thin
+        }
+
+        /* ---------- Table ---------- */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            overflow: hidden
+        }
+
+        th,
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--bd);
+            text-align: left;
+            white-space: nowrap
+        }
+
+        th {
+            background: var(--ac2);
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--tx)
+        }
+
+        tr:last-child td {
+            border-bottom: 0
+        }
+
+        tr.tr-active {
+            background: var(--ac2) !important;
+            font-weight: 600
+        }
+
+        td.bst {
+            color: var(--ok);
+            font-weight: 700
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff
+        }
+
+        .tag.new { background: #7c8aa5; }
+        .tag.ready { background: #2563eb; }
+        .tag.running { background: #16a34a; }
+        .tag.waiting { background: #d97706; }
+        .tag.terminated { background: #64748b; }
+        .tag.r { background: #2563eb; }
+        .tag.t { background: #64748b; }
+
+        /* ---------- KPI ---------- */
+        .kpi {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin: 16px 0
+        }
+
+        .kpi>div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 20px 14px;
+            color: var(--mu);
+            box-shadow: var(--sh)
+        }
+
+        .kpi b {
+            display: block;
+            font-size: 26px;
+            line-height: 1.2;
+            color: var(--tx);
+            margin-bottom: 2px;
+            letter-spacing: -.01em
+        }
+
+        .kpi b.ok {
+            color: var(--ok)
+        }
+
+        .kpi b.hi {
+            color: var(--hi)
+        }
+
+        .kpi b.over {
+            color: var(--er)
+        }
+
+        .ok {
+            color: var(--ok)
+        }
+
+        .hi {
+            color: var(--hi)
+        }
+
+        .over {
+            color: var(--er)
+        }
+
+        /* ---------- Hero ---------- */
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr);
+            align-items: center;
+            gap: 24px;
+            padding: 44px 48px;
+            border-radius: 18px;
+            color: #fff;
+            background: radial-gradient(60% 110% at 88% 70%, rgba(59, 110, 240, .55), transparent 70%), linear-gradient(135deg, #0d2a63, #1a4cc0);
+            margin-bottom: 20px
+        }
+
+        .ey {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            color: #8fb4ff;
+            margin-bottom: 8px
+        }
+
+        .hero h1 {
+            font-size: clamp(30px, 4vw, 44px);
+            white-space: nowrap;
+            margin: 0 0 14px;
+            letter-spacing: -.025em
+        }
+
+        .hero p {
+            max-width: 52ch;
+            margin: 0 0 26px;
+            font-size: 16.5px;
+            line-height: 1.6;
+            color: #dbe6ff
+        }
+
+        .hero .hb {
+            background: #3b6ef0;
+            padding: 13px 24px;
+            font-size: 15.5px;
+            border-radius: 10px
+        }
+
+        .hv {
+            display: grid;
+            place-items: center
+        }
+
+        .hv svg {
+            width: 100%;
+            height: auto;
+            max-width: 480px
+        }
+
+        /* ---------- Virtual desktop ---------- */
+        .dk {
+            position: relative;
+            height: 520px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--bd);
+            background: radial-gradient(55% 70% at 70% 30%, rgba(96, 165, 250, .55), transparent 70%), radial-gradient(45% 60% at 20% 90%, rgba(37, 99, 235, .6), transparent 70%), linear-gradient(135deg, #0d2a63, #1d4ed8 65%, #3b82f6);
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 10px;
+            padding: 16px 16px 72px;
+            box-shadow: var(--sh)
+        }
+
+        .ic {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            width: 92px;
+            background: none;
+            border: 0;
+            color: #fff;
+            font: inherit;
+            font-size: 12.5px;
+            line-height: 1.25;
+            text-align: center;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+            cursor: pointer;
+            border-radius: 10px;
+            padding: 8px 4px
+        }
+
+        .ic:hover {
+            background: rgba(255, 255, 255, .16)
+        }
+
+        .ic:active {
+            background: rgba(255, 255, 255, .26)
+        }
+
+        .ic .tile {
+            display: grid;
+            place-items: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, .18);
+            border: 1px solid rgba(255, 255, 255, .28);
+            backdrop-filter: blur(6px);
+            color: #fff;
+            text-shadow: none
+        }
+
+        .tk {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 52px;
+            background: rgba(244, 247, 252, .86);
+            backdrop-filter: blur(18px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 0 14px;
+            color: #0f1e3d;
+            border-top: 1px solid rgba(255, 255, 255, .6);
+            z-index: 9999
+        }
+
+        .st {
+            display: grid;
+            grid-template-columns: 9px 9px;
+            gap: 2px;
+            margin: 0 4px 0 0
+        }
+
+        .st i {
+            width: 9px;
+            height: 9px;
+            background: #2563eb;
+            display: block;
+            border-radius: 1px
+        }
+
+        .se {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, .8);
+            border: 1px solid rgba(15, 30, 61, .12);
+            border-radius: 999px;
+            padding: 5px 16px;
+            font-size: 13px;
+            min-width: 160px;
+            color: #5f6c85
+        }
+
+        #tbi {
+            display: flex;
+            gap: 6px
+        }
+
+        #tbi span {
+            position: relative;
+            display: grid;
+            place-items: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, .7);
+            color: #2563eb
+        }
+
+        #tbi span::after {
+            content: "";
+            position: absolute;
+            bottom: 2px;
+            width: 12px;
+            height: 3px;
+            border-radius: 3px;
+            background: #2563eb
+        }
+
+        .cl {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            text-align: right;
+            line-height: 1.3
+        }
+
+        .win {
+            position: absolute;
+            width: 300px;
+            max-width: 80%;
+            background: var(--sf);
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            box-shadow: 0 16px 40px rgba(5, 15, 45, .35)
+        }
+
+        .wh {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px 6px 14px;
+            cursor: move;
+            background: var(--ac2);
+            border-radius: 12px 12px 0 0;
+            touch-action: none;
+            font-size: 13.5px;
+            font-weight: 600
+        }
+
+        .wt {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--ac)
+        }
+
+        .wt::after {
+            content: attr(data-t);
+            color: var(--tx)
+        }
+
+        .wh button {
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border: 0;
+            background: none;
+            color: var(--tx);
+            cursor: pointer;
+            border-radius: 6px
+        }
+
+        .wh button:hover {
+            background: #e81123;
+            color: #fff
+        }
+
+        .wb {
+            padding: 12px 14px 14px;
+            font-size: 13.5px
+        }
+
+        .wb p {
+            margin: 0 0 10px
+        }
+
+        .wb textarea {
+            width: 100%;
+            height: 70px
+        }
+
+        /* ---------- Gantt & Timeline ---------- */
+        input[type=range] {
+            width: min(320px, 60%);
+            padding: 0;
+            vertical-align: middle;
+            accent-color: var(--ac)
+        }
+
+        input[type=checkbox] {
+            accent-color: var(--ac)
+        }
+
+        .gt-wrap {
+            position: relative;
+            margin-bottom: 8px;
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 16px 14px 8px;
+        }
+
+        .gt-scroll {
+            overflow-x: auto;
+            scrollbar-width: thin;
+            padding-bottom: 4px;
+            position: relative;
+        }
+
+        .gt-inner {
+            position: relative;
+            padding-top: 10px;
+        }
+
+        .gt {
+            position: relative;
+            display: flex;
+            gap: 2px;
+            height: 48px;
+            margin-bottom: 28px
+        }
+
+        .sg {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            min-width: 0;
+            user-select: none;
+            transition: opacity .15s, outline .15s, filter .15s;
+        }
+
+        .sg.idle {
+            background: repeating-linear-gradient(45deg, var(--bd), var(--bd) 6px, rgba(0,0,0,0.03) 6px, rgba(0,0,0,0.03) 12px) !important;
+            color: var(--mu) !important;
+            border: 1px dashed var(--bd);
+            font-weight: 500;
+            font-size: 11px;
+        }
+
+        .sg.active {
+            outline: 2.5px solid var(--ac);
+            outline-offset: 1px;
+            box-shadow: 0 0 12px rgba(37, 99, 235, .45);
+            z-index: 2;
+        }
+
+        .sg.future {
+            opacity: 0.38;
+            filter: saturate(60%);
+        }
+
+        .sg.past {
+            opacity: 1;
+        }
+
+        .sg small {
+            position: absolute;
+            bottom: -22px;
+            left: 0;
+            transform: translateX(-50%);
+            color: var(--mu);
+            font-size: 11px;
+            font-weight: 500
+        }
+
+        .sg:first-child small {
+            transform: none
+        }
+
+        .sg small.en {
+            left: auto;
+            right: 0;
+            transform: translateX(50%)
+        }
+
+        /* Timeline axis ticks */
+        .gt-axis {
+            position: relative;
+            height: 20px;
+            border-top: 1px solid var(--bd);
+            margin-top: -6px;
+        }
+
+        .gt-tick {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--mu);
+            font-size: 10px;
+            pointer-events: none;
+        }
+
+        .gt-tick::before {
+            content: "";
+            width: 1px;
+            height: 4px;
+            background: var(--mu);
+            margin-bottom: 2px;
+        }
+
+        .gt-cur-line {
+            position: absolute;
+            top: 6px;
+            bottom: 24px;
+            width: 2px;
+            background: #ef4444;
+            z-index: 10;
+            pointer-events: none;
+            transition: left .08s ease-out;
+        }
+
+        .gt-cur-line::after {
+            content: "▼";
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #ef4444;
+        }
+
+        .lgd {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 14px;
+            margin-top: 8px;
+            font-size: 12.5px;
+            color: var(--mu)
+        }
+
+        .lgd span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .lgd i {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: block
+        }
+
+        .bt:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            filter: none
+        }
+
+        /* ---------- Ready Queue ---------- */
+        .rq-wrap {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 14px 0 20px;
+            box-shadow: var(--sh);
+        }
+
+        .rq-lbl {
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--tx);
+            margin-right: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .rq-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--ac2);
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 12.5px;
+        }
+
+        .rq-item b {
+            color: #fff;
+            padding: 1px 7px;
+            border-radius: 4px;
+            font-size: 11.5px;
+        }
+
+        .rq-arr {
+            color: var(--mu);
+            font-weight: bold;
+        }
+
+        /* ---------- Controls ---------- */
+        .ctl .cb {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center
+        }
+
+        .ctl .cb label {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--mu);
+            font-size: 13.5px
+        }
+
+        .ctl .tl {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 14px
+        }
+
+        .ctl .tl input[type=range] {
+            flex: 1;
+            width: auto
+        }
+
+        .ctl .tl span {
+            white-space: nowrap;
+            color: var(--mu)
+        }
+
+        .ctl .tl b {
+            color: var(--tx)
+        }
+
+        .ss {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0 0;
+            font-size: 13.5px;
+            color: var(--mu)
+        }
+
+        .ss i {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--mu);
+            flex: none
+        }
+
+        .ss.on i {
+            background: var(--ok)
+        }
+
+        /* ---------- Simulator vertical layout (Section 7) ---------- */
+        .sim {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 16px
+        }
+
+        .sim .card h3 {
+            margin: 0 0 2px
+        }
+
+        .sim .card>p.mu {
+            margin: 0 0 16px;
+            font-size: 13px
+        }
+
+        /* ---------- State diagram SVG ---------- */
+        .sd {
+            width: 100%;
+            height: auto;
+            max-height: 250px;
+            display: block
+        }
+
+        .sd .nd {
+            fill: var(--sf);
+            stroke: var(--bd);
+            stroke-width: 1.2
+        }
+
+        .sd .nd.dash {
+            stroke-dasharray: 4 4
+        }
+
+        .sd text {
+            fill: var(--tx);
+            font-size: 10.5px;
+            font-weight: 600
+        }
+
+        .sd text.sub {
+            fill: var(--mu);
+            font-size: 10.5px;
+            font-weight: 400
+        }
+
+        .sd text.cn {
+            fill: var(--mu);
+            font-size: 11px;
+            font-weight: 700;
+            text-anchor: end
+        }
+
+        .sd text.cp {
+            fill: #fff;
+            font-size: 10.5px;
+            font-weight: 600;
+            text-anchor: middle
+        }
+
+        .sd .ar {
+            fill: none;
+            stroke: var(--mu);
+            stroke-width: 1.4;
+            opacity: .7
+        }
+
+        .sd .ar.dash {
+            stroke-dasharray: 3 3;
+            opacity: .45
+        }
+
+        .sd .ar.on {
+            stroke: var(--ac);
+            stroke-width: 2.6;
+            opacity: 1
+        }
+
+        .sd .mh {
+            fill: var(--mu)
+        }
+
+        .sd .mo {
+            fill: var(--ac)
+        }
+
+        .evl {
+            list-style: none;
+            margin: 14px 0 0;
+            padding: 12px 0 0;
+            border-top: 1px solid var(--bd);
+            display: grid;
+            gap: 6px;
+            font-size: 13px
+        }
+
+        .evl li {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .evl .tm {
+            min-width: 48px;
+            color: var(--mu);
+            font-variant-numeric: tabular-nums
+        }
+
+        .evl .pc {
+            display: inline-grid;
+            place-items: center;
+            min-width: 34px;
+            padding: 1px 8px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600
+        }
+
+        .evl .st2 {
+            font-weight: 600
+        }
+
+        .evl .mu {
+            margin: 0
+        }
+
+        .note {
+            margin: 10px 0 0;
+            font-size: 12.5px
+        }
+
+        @media(max-width:900px) {
+            .ctl .cb label {
+                margin-left: 0
+            }
+        }
+
+        .fm {
+            display: grid;
+            gap: 12px;
+            max-width: 520px
+        }
+
+        .fm label {
+            display: grid;
+            gap: 4px
+        }
+
+        /* ---------- Pipeline Flow in About page ---------- */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .pipe-step {
+            flex: 1 1 200px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .pipe-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--ac);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex: none;
+        }
+
+        .pipe-sep {
+            color: var(--mu);
+            font-size: 20px;
+            font-weight: bold;
+            display: grid;
+            place-items: center;
+        }
+
+        @media(max-width: 768px) {
+            .pipe-sep {
+                display: none;
+            }
+        }
+
+        /* ---------- Contact Page Layout ---------- */
+        .contact-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        @media(max-width: 860px) {
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media(max-width: 580px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .faq-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .faq-item {
+            background: var(--bg);
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+
+        .faq-item b {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--tx);
+        }
+
+        .faq-item p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* ---------- Footer ---------- */
+        footer {
+            border-top: 1px solid var(--bd);
+            padding: 22px 16px 26px;
+            text-align: center;
+            color: var(--mu);
+            font-size: 13px;
+            line-height: 2
+        }
+
+        footer a {
+            color: var(--ac);
+            cursor: pointer;
+            margin: 0 10px
+        }
+
+        footer a:hover {
+            text-decoration: underline
+        }
+
+        @media(max-width:760px) {
+            .hero {
+                grid-template-columns: 1fr;
+                padding: 32px 24px
+            }
+
+            .hv {
+                display: none
+            }
+
+            .hero h1 {
+                white-space: normal
+            }
+        }
+
+        @media(max-width:600px) {
+            .dk {
+                height: 460px
+            }
+
+            .se {
+                min-width: 0;
+                padding: 5px 12px
+            }
+
+            .se span {
+                display: none
+            }
+
+            .cl {
+                display: none
+            }
+        }
+
+        @media(prefers-reduced-motion:reduce) {
+            * {
+                transition: none !important
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="nav" id="nav"></header>
+    <main>
+        <div id="v"></div>
+        <div id="vm" hidden></div>
+    </main>
+    <footer>CPU Scheduling Simulator - Công cụ mô phỏng phục vụ học môn Hệ điều hành - 2026<br><a onclick="go('about')">Giới thiệu</a><a onclick="go('contact')">Liên hệ</a><a onclick="alert('Hệ thống không thu thập dữ liệu cá nhân; mọi dữ liệu nằm trong trình duyệt của bạn.')">Chính sách bảo mật</a></footer>
+    <script>
+        const $ = s => document.querySelector(s);
+        const IC = {
+            chip: '<rect x="6" y="6" width="12" height="12" rx="2.5"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>',
+            list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8"/><circle cx="3.5" cy="12" r=".8"/><circle cx="3.5" cy="18" r=".8"/>',
+            clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+            check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+            nodes: '<circle cx="12" cy="5.5" r="2.5"/><circle cx="5.5" cy="18" r="2.5"/><circle cx="18.5" cy="18" r="2.5"/><path d="M10.8 7.8L6.8 15.7M13.2 7.8l4 7.9"/>',
+            monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+            bars: '<path d="M5 20V13M12 20V4M19 20V9"/>',
+            gauge: '<path d="M4.5 18a9 9 0 1 1 15 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1"/>',
+            chart: '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M7 15l3.5-3.5 2.5 2.5 4-5"/>',
+            search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+            folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+            globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/>',
+            calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/>',
+            play: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.5 9.5v5l4-2.5z"/>',
+            note: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+            gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
+            arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+            x: '<path d="M6 6l12 12M18 6L6 18"/>',
+            run: '<path d="M8 5.5l11 6.5-11 6.5z"/>',
+            pause: '<path d="M9 5v14M15 5v14"/>',
+            step: '<path d="M5 5.5l9 6.5-9 6.5zM19 5v14"/>',
+            reset: '<path d="M4 12a8 8 0 1 0 2.6-5.9M4 4.5V9h4.5"/>'
+        };
+        const svg = (n, s = 22, w = 1.8) => `<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||IC.chip}</svg>`;
+        const EM = { '🖥️': 'monitor', '📁': 'folder', '🌐': 'globe', '🧮': 'calc', '▶️': 'play', '📝': 'note', '⚙️': 'gear' };
+        const ico = (e, s = 20) => svg(EM[e] || 'chip', s);
+        const HERO_SVG = `<svg viewBox="0 0 520 240" fill="none" aria-hidden="true"><g stroke="#cfe0ff" stroke-width="3" stroke-linecap="round"><path d="M70 22v22M100 22v22M130 22v22M160 22v22M70 196v22M100 196v22M130 196v22M160 196v22M22 70h22M22 100h22M22 130h22M22 160h22M186 70h22M186 100h22M186 130h22M186 160h22"/></g><rect x="44" y="44" width="142" height="152" rx="18" fill="rgba(255,255,255,.08)" stroke="#8fb4ff" stroke-width="3"/><rect x="66" y="68" width="98" height="104" rx="10" fill="rgba(255,255,255,.06)" stroke="#fff" stroke-width="3"/><text x="115" y="130" text-anchor="middle" font-family="Inter,Segoe UI,sans-serif" font-size="30" font-weight="700" fill="#fff">CPU</text><rect x="236" y="30" width="268" height="180" rx="12" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/><g stroke="rgba(255,255,255,.18)"><path d="M270 44v152M320 44v152M370 44v152M420 44v152M470 44v152"/></g><rect x="262" y="56" width="62" height="16" rx="3" fill="#5b8cff"/><rect x="298" y="86" width="74" height="16" rx="3" fill="#8fb4ff"/><rect x="352" y="116" width="74" height="16" rx="3" fill="#6f9bff"/><rect x="408" y="146" width="54" height="16" rx="3" fill="#8fb4ff"/><rect x="446" y="176" width="42" height="16" rx="3" fill="#bcd2ff"/></svg>`;
+
+        const NM = { FCFS: 'FCFS', SJF: 'SJF', SRTF: 'SRTF', PRIO: 'Priority', RR: 'Round Robin', MLQ: 'Multilevel Queue', MLFQ: 'Multilevel Feedback Queue' };
+        const AL = [
+            ['FCFS', 'Tiến trình đến trước được cấp CPU trước, chạy đến khi xong (không ngắt). Phù hợp khi các tác vụ có độ dài tương đương.', 'Đơn giản, công bằng theo thứ tự đến.', 'Hiệu ứng đoàn xe: tiến trình dài làm tiến trình ngắn chờ lâu.'],
+            ['SJF', 'Chọn tiến trình sẵn sàng có CPU Burst ngắn nhất, không ngắt. Cần biết trước thời gian xử lý.', 'Giảm thời gian chờ trung bình.', 'Tiến trình dài có thể bị bỏ đói; phải ước lượng burst.'],
+            ['SRTF', 'Phiên bản có ngắt của SJF: luôn chạy tiến trình còn lại ít nhất, tiến trình mới ngắn hơn sẽ giành CPU.', 'Thời gian chờ trung bình thấp nhất trong nhóm dựa trên burst.', 'Đổi ngữ cảnh nhiều; tiến trình dài dễ bị bỏ đói.'],
+            ['PRIO', 'Chọn tiến trình có mức ưu tiên cao nhất (số nhỏ = ưu tiên cao). Có thể bật chế độ ngắt; cùng ưu tiên xếp theo thứ tự đến.', 'Phục vụ tác vụ quan trọng trước.', 'Nguy cơ starvation với tiến trình ưu tiên thấp.'],
+            ['RR', 'Mỗi tiến trình dùng CPU tối đa một Time Quantum rồi quay lại cuối hàng đợi.', 'Công bằng, phản hồi tốt cho tác vụ tương tác.', 'Quantum quá nhỏ gây đổi ngữ cảnh nhiều; quá lớn thành FCFS.'],
+            ['MLQ', 'Hai hàng đợi cố định theo loại tiến trình: hàng 0 (tương tác, Round Robin) ưu tiên hơn hàng 1 (CPU-bound, FCFS).', 'Chính sách riêng cho từng nhóm.', 'Tiến trình không đổi hàng; nhóm thấp có thể bị bỏ đói.'],
+            ['MLFQ', 'Ba hàng đợi: Quantum q, 2q rồi FCFS. Tiến trình mới vào hàng cao nhất, dùng hết quantum thì bị đẩy xuống.', 'Ưu tiên tác vụ ngắn mà không cần biết trước burst.', 'Nhiều tham số; tiến trình dài ở hàng thấp có thể chờ lâu.']
+        ];
+        const LIM = { FCFS: 'Hiệu ứng đoàn xe', SJF: 'Cần biết trước burst; có thể bỏ đói tiến trình dài', SRTF: 'Đổi ngữ cảnh nhiều; có thể bỏ đói tiến trình dài', PRIO: 'Nguy cơ starvation', RR: 'Phụ thuộc Quantum, đổi ngữ cảnh nhiều', MLQ: 'Nhóm cố định, hàng thấp có thể bị bỏ đói', MLFQ: 'Nhiều tham số cần cấu hình' };
+        const APPS = [['This PC', '🖥️', 'HH', 2, 0, 3, 'Xem ổ đĩa và thiết bị.'], ['Thư mục', '📁', 'IO', 2, 3, 3, 'Mở, đọc và ghi tệp (nhiều chờ I/O).'], ['Trình duyệt', '🌐', 'IO', 4, 3, 3, 'Tải trang và tương tác (CPU xen I/O).'], ['Máy tính', '🧮', 'HH', 2, 0, 2, 'Phép tính với CPU Burst xác định.'], ['Video', '▶️', 'IO', 5, 6, 3, 'Phát video: nhiều giai đoạn CPU xen chờ I/O.'], ['Notepad', '📝', 'IO', 1, 1, 1, 'Soạn văn bản, tác vụ tương tác nhẹ.'], ['Chạy chương trình', '⚙️', 'CPU', 10, 0, 4, 'Chương trình tính toán nặng (CPU-bound).']];
+        const SC = [['burst', 'Nhiều tiến trình đến cùng lúc'], ['cpu', 'Tải CPU cao'], ['mixed', 'Tải hỗn hợp'], ['inter', 'Tác vụ tương tác'], ['hiprio', 'Tải ưu tiên cao'], ['starve', 'Nguy cơ Starvation']];
+        const SC_INFO = {
+            burst: {
+                title: 'Nhiều tiến trình đến cùng lúc (Burst Load)',
+                desc: 'Hàng loạt tác vụ đồng loạt xuất hiện tại thời điểm ban đầu hoặc trong khoảng thời gian rất ngắn (ví dụ: máy tính vừa khởi động và tải một loạt dịch vụ).',
+                cause: 'Hiệu ứng đoàn xe (Convoy Effect) xảy ra nếu dùng FCFS vì tiến trình dài chiếm CPU khiến các tiến trình ngắn đến cùng lúc phải chờ đợi rất lâu. Tỷ lệ thời gian chờ / CPU burst tăng vọt.',
+                rec: 'SJF hoặc SRTF giúp giải phóng nhanh các tiến trình ngắn; Round Robin chia đều thời gian giúp mọi tiến trình phản hồi sớm.'
+            },
+            cpu: {
+                title: 'Tải CPU cao (CPU-bound Workload)',
+                desc: 'Tập tác vụ tính toán nặng nề (mã hóa dữ liệu, render video, tính toán khoa học) đòi hỏi thời gian CPU burst rất dài, hầu như không có thời gian nhàn rỗi.',
+                cause: 'Mức bận CPU đạt ~100%, hàng đợi tích lũy nhiều tiến trình. Thuật toán có nhiều chuyển ngữ cảnh (như Round Robin với quantum quá nhỏ) sẽ sinh overhead lớn làm chậm thông lượng toàn hệ thống.',
+                rec: 'FCFS hoặc SJF giúp tối ưu throughput và giảm thiểu số lần chuyển ngữ cảnh context switch; Round Robin với Quantum lớn.'
+            },
+            mixed: {
+                title: 'Tải hỗn hợp (Mixed CPU-bound & I/O-bound)',
+                desc: 'Môi trường thực tế điển hình: bao gồm cả tác vụ tương tác người dùng ngắn (soạn thảo, lướt web) xen lẫn các tác vụ tính toán ngầm kéo dài.',
+                cause: 'Nếu dùng thuật toán đơn cấp như FCFS, tác vụ tính toán nặng sẽ chặn đứng tác vụ tương tác. Cần cơ chế phân lớp hàng đợi để phục vụ tác vụ ngắn trước mà không làm tắc nghẽn hệ thống.',
+                rec: 'Multilevel Feedback Queue (MLFQ) hoặc Multilevel Queue (MLQ) là tối ưu nhất vì tự động phân tách tác vụ ngắn sang hàng đợi ưu tiên cao, đẩy tác vụ dài xuống hàng đợi thấp.'
+            },
+            inter: {
+                title: 'Tác vụ tương tác (Interactive / Low Latency)',
+                desc: 'Người dùng đang thao tác trên giao diện: gõ phím, nhấp chuột, cuộn trang. Yêu cầu quan trọng nhất là thời gian phản hồi (Response Time) phải cực nhỏ để giao diện không bị giật lag.',
+                cause: 'Các thuật toán không ngắt (FCFS, SJF) có thể khiến tác vụ tương tác bị trễ hàng chục đơn vị thời gian nếu có một tiến trình dài đang chiếm CPU.',
+                rec: 'Round Robin (với Quantum vừa phải) hoặc MLFQ giúp phản hồi tức thì cho người dùng ngay khi có sự kiện.'
+            },
+            hiprio: {
+                title: 'Tải ưu tiên cao (High Priority Dominance)',
+                desc: 'Hệ thống có các tác vụ quản trị, tiến trình hạt nhân (kernel) hoặc dịch vụ thời gian thực có mức ưu tiên cao hơn các tác vụ thông thường của người dùng.',
+                cause: 'Cần đảm bảo các tiến trình khẩn cấp được phục vụ ngay lập tức. Tuy nhiên, nếu luồng tác vụ ưu tiên cao xuất hiện liên tục thì các tác vụ ưu tiên thấp sẽ có nguy cơ bị đói CPU (Starvation).',
+                rec: 'Priority Scheduling (có ngắt) để phục vụ ngay tác vụ cấp bách; kết hợp cơ chế tránh starvation như Round Robin hoặc Aging/MLFQ.'
+            },
+            starve: {
+                title: 'Nguy cơ Starvation (Bỏ đói tiến trình)',
+                desc: 'Tiến trình ưu tiên thấp hoặc tiến trình có CPU Burst dài liên tục bị hoãn lại vô thời hạn do liên tục có các tiến trình ưu tiên cao hơn hoặc ngắn hơn đến sau chen ngang.',
+                cause: 'SRTF và Priority Preemptive gây ra sự bất công bằng nghiêm trọng khi tải cao: một tiến trình có thể phải chờ gấp nhiều lần thời gian thực thi của chính nó.',
+                rec: 'Round Robin hoặc MLFQ để bảo đảm tính công bằng (Fairness), giới hạn thời gian chờ tối đa (Max Waiting Time) và đảm bảo mọi tiến trình đều được cấp CPU.'
+            }
+        };
+        const COL = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5', '#0891b2', '#ea580c'];
+        const S = { view: 'home', procs: [], pid: 1, t0: Date.now(), algo: null, q: 3, pp: true, fin: false, z: 5, wn: 0, sc: 'starve', n: 12, load: null, r: null, cur: 0, tm: null };
+
+        /* =========================================================================
+           3. BỘ XỬ LÝ LẬP LỊCH CPU CHUẨN XÁC & TẠO ẢNH TRẠNG THÁI (SNAPSHOTS)
+           - Giữ nguyên Arrival Time thật của tiến trình (KHÔNG trừ mn làm lệch mốc 0)
+           - Xử lý đúng thời gian CPU rỗi (Idle)
+           - Đảm bảo logic chuẩn của FCFS, SJF, SRTF, PRIO, RR, MLQ, MLFQ
+           - Tạo snapshot trạng thái chi tiết tại từng đơn vị thời gian t
+        ========================================================================= */
+        function sim(P0, algo, q, pp) {
+            if (!P0 || !P0.length) return null;
+            q = Math.max(1, +q || 3);
+            const P = P0.map((p, idx) => ({
+                idx,
+                pid: p.pid,
+                name: p.name || ('P' + p.pid),
+                type: p.type || 'HH',
+                at: Math.max(0, +p.at || 0),
+                cpu: Math.max(1, +p.cpu || 1),
+                io: Math.max(0, +p.io || 0),
+                pr: +p.pr || 0,
+                rem: Math.max(1, +p.cpu || 1),
+                lvl: 0,
+                usedQ: 0,
+                firstRun: null,
+                ct: null,
+                wt: 0
+            }));
+            const n = P.length;
+            let t = 0, cur = null, lastPid = null;
+            let cs = 0, busy = 0, done = 0;
+            const gantt = [];
+            const events = [];
+            const snapshots = [];
+            const Q = algo === 'MLQ' ? [[], []] : algo === 'MLFQ' ? [[], [], []] : [[]];
+
+            function logEv(time, pid, from, to, reason) {
+                events.push({ t: time, pid, from, to, reason });
+            }
+
+            function recordSnapshot(now) {
+                const readyList = [];
+                if (algo === 'MLQ') {
+                    for (let l = 0; l < 2; l++) {
+                        for (let p of Q[l]) readyList.push({ idx: p.idx, pid: p.pid, name: p.name, rem: p.rem, pr: p.pr, lvl: l });
+                    }
+                } else if (algo === 'MLFQ') {
+                    for (let l = 0; l < 3; l++) {
+                        for (let p of Q[l]) readyList.push({ idx: p.idx, pid: p.pid, name: p.name, rem: p.rem, pr: p.pr, lvl: l });
+                    }
+                } else {
+                    for (let p of Q[0]) readyList.push({ idx: p.idx, pid: p.pid, name: p.name, rem: p.rem, pr: p.pr, lvl: 0 });
+                }
+
+                const procStats = P.map(p => {
+                    let st = 'New';
+                    if (p.ct !== null && p.ct <= now) st = 'Terminated';
+                    else if (cur && cur.pid === p.pid) st = 'Running';
+                    else if (p.at <= now) st = 'Ready';
+                    return {
+                        idx: p.idx,
+                        pid: p.pid,
+                        name: p.name,
+                        type: p.type,
+                        at: p.at,
+                        cpu: p.cpu,
+                        io: p.io,
+                        pr: p.pr,
+                        rem: p.rem,
+                        lvl: p.lvl,
+                        state: st,
+                        wt: p.wt,
+                        tat: (p.ct !== null && p.ct <= now) ? (p.ct - p.at) : (p.at <= now ? now - p.at : 0),
+                        rt: p.firstRun !== null && p.firstRun <= now ? (p.firstRun - p.at) : null,
+                        ct: p.ct !== null && p.ct <= now ? p.ct : null
+                    };
+                });
+
+                snapshots.push({
+                    t: now,
+                    curRunningPid: cur ? cur.pid : -1,
+                    readyList,
+                    procStats,
+                    busy,
+                    cs,
+                    done,
+                    u: now > 0 ? (busy / now * 100) : 0,
+                    thr: now > 0 ? (done / now) : 0,
+                    eventsUpToT: events.slice()
+                });
+            }
+
+            while (done < n && t < 10000) {
+                // 1. Tiến trình đến tại thời điểm t
+                const arriving = P.filter(p => p.at === t);
+                for (let p of arriving) {
+                    logEv(t, p.pid, 'New', 'Ready', 'Đến hệ thống, vào hàng đợi sẵn sàng');
+                    if (algo === 'MLQ') {
+                        p.lvl = (p.type === 'CPU') ? 1 : 0;
+                        Q[p.lvl].push(p);
+                    } else if (algo === 'MLFQ') {
+                        p.lvl = 0;
+                        p.usedQ = 0;
+                        Q[0].push(p);
+                    } else {
+                        Q[0].push(p);
+                    }
+                }
+
+                // 2. Kiểm tra hết Quantum hoặc Tiền đình (Preemption) của tiến trình đang chạy
+                if (cur !== null) {
+                    let qLimit = 1e9;
+                    if (algo === 'RR') qLimit = q;
+                    else if (algo === 'MLQ') qLimit = (cur.lvl === 0) ? q : 1e9;
+                    else if (algo === 'MLFQ') qLimit = (cur.lvl === 0) ? q : (cur.lvl === 1) ? 2 * q : 1e9;
+
+                    if (cur.usedQ >= qLimit) {
+                        // Hết lượt Quantum
+                        if (algo === 'MLFQ') {
+                            cur.lvl = Math.min(2, cur.lvl + 1);
+                            cur.usedQ = 0;
+                            logEv(t, cur.pid, 'Running', 'Ready', 'Hết Quantum (' + qLimit + '), chuyển xuống Q' + cur.lvl);
+                            Q[cur.lvl].push(cur);
+                        } else if (algo === 'MLQ') {
+                            cur.usedQ = 0;
+                            logEv(t, cur.pid, 'Running', 'Ready', 'Hết Quantum, quay lại cuối Q' + cur.lvl);
+                            Q[cur.lvl].push(cur);
+                        } else if (algo === 'RR') {
+                            cur.usedQ = 0;
+                            logEv(t, cur.pid, 'Running', 'Ready', 'Hết Quantum (' + q + '), quay lại cuối hàng đợi');
+                            Q[0].push(cur);
+                        }
+                        cur = null;
+                    } else {
+                        // Kiểm tra ngắt tiền đình (Preemption)
+                        let preempt = false, reason = '';
+                        if (algo === 'SRTF') {
+                            let minP = null;
+                            for (let p of Q[0]) {
+                                if (!minP || p.rem < minP.rem || (p.rem === minP.rem && p.at < minP.at)) minP = p;
+                            }
+                            if (minP && minP.rem < cur.rem) {
+                                preempt = true;
+                                reason = 'Bị ngắt bởi P' + minP.pid + ' có thời gian còn lại ngắn hơn (' + minP.rem + ' < ' + cur.rem + ')';
+                                Q[0].push(cur);
+                            }
+                        } else if (algo === 'PRIO' && pp) {
+                            let minP = null;
+                            for (let p of Q[0]) {
+                                if (!minP || p.pr < minP.pr || (p.pr === minP.pr && p.at < minP.at)) minP = p;
+                            }
+                            if (minP && minP.pr < cur.pr) {
+                                preempt = true;
+                                reason = 'Bị ngắt bởi P' + minP.pid + ' có ưu tiên cao hơn (' + minP.pr + ' < ' + cur.pr + ')';
+                                Q[0].push(cur);
+                            }
+                        } else if (algo === 'MLQ') {
+                            if (cur.lvl === 1 && Q[0].length > 0) {
+                                preempt = true;
+                                reason = 'Bị ngắt bởi tiến trình ở hàng đợi Q0 ưu tiên hơn';
+                                Q[1].unshift(cur);
+                            }
+                        } else if (algo === 'MLFQ') {
+                            let hasHigher = false;
+                            for (let l = 0; l < cur.lvl; l++) {
+                                if (Q[l].length > 0) { hasHigher = true; break; }
+                            }
+                            if (hasHigher) {
+                                preempt = true;
+                                reason = 'Bị ngắt bởi tiến trình ở hàng đợi ưu tiên cao hơn';
+                                Q[cur.lvl].unshift(cur);
+                            }
+                        }
+                        if (preempt) {
+                            logEv(t, cur.pid, 'Running', 'Ready', reason);
+                            cur = null;
+                        }
+                    }
+                }
+
+                // 3. Chọn tiến trình tiếp theo nếu CPU đang trống
+                if (cur === null) {
+                    if (algo === 'SJF') {
+                        if (Q[0].length > 0) {
+                            let b = 0;
+                            for (let i = 1; i < Q[0].length; i++) {
+                                if (Q[0][i].cpu < Q[0][b].cpu || (Q[0][i].cpu === Q[0][b].cpu && Q[0][i].at < Q[0][b].at)) b = i;
+                            }
+                            cur = Q[0].splice(b, 1)[0];
+                            cur.usedQ = 0;
+                        }
+                    } else if (algo === 'SRTF') {
+                        if (Q[0].length > 0) {
+                            let b = 0;
+                            for (let i = 1; i < Q[0].length; i++) {
+                                if (Q[0][i].rem < Q[0][b].rem || (Q[0][i].rem === Q[0][b].rem && Q[0][i].at < Q[0][b].at)) b = i;
+                            }
+                            cur = Q[0].splice(b, 1)[0];
+                            cur.usedQ = 0;
+                        }
+                    } else if (algo === 'PRIO') {
+                        if (Q[0].length > 0) {
+                            let b = 0;
+                            for (let i = 1; i < Q[0].length; i++) {
+                                if (Q[0][i].pr < Q[0][b].pr || (Q[0][i].pr === Q[0][b].pr && Q[0][i].at < Q[0][b].at)) b = i;
+                            }
+                            cur = Q[0].splice(b, 1)[0];
+                            cur.usedQ = 0;
+                        }
+                    } else if (algo === 'MLQ') {
+                        if (Q[0].length > 0) {
+                            cur = Q[0].shift();
+                            cur.usedQ = 0;
+                        } else if (Q[1].length > 0) {
+                            cur = Q[1].shift();
+                            cur.usedQ = 0;
+                        }
+                    } else if (algo === 'MLFQ') {
+                        for (let l = 0; l < 3; l++) {
+                            if (Q[l].length > 0) {
+                                cur = Q[l].shift();
+                                break;
+                            }
+                        }
+                    } else {
+                        // FCFS, RR
+                        if (Q[0].length > 0) {
+                            cur = Q[0].shift();
+                            cur.usedQ = 0;
+                        }
+                    }
+
+                    if (cur !== null) {
+                        if (cur.firstRun === null) cur.firstRun = t;
+                        if (lastPid !== null && lastPid !== cur.pid) cs++;
+                        lastPid = cur.pid;
+                        logEv(t, cur.pid, 'Ready', 'Running', 'Được cấp CPU thực thi');
+                    }
+                }
+
+                // Ghi nhận snapshot tại thời điểm t
+                recordSnapshot(t);
+
+                // 4. Ghi nhận biểu đồ Gantt
+                const pid = (cur !== null) ? cur.pid : -1;
+                const lastG = gantt[gantt.length - 1];
+                if (lastG && lastG.pid === pid && lastG.e === t) {
+                    lastG.e++;
+                } else {
+                    gantt.push({ pid, s: t, e: t + 1 });
+                }
+
+                // 5. Thực thi 1 đơn vị thời gian [t, t+1)
+                if (cur !== null) {
+                    cur.rem--;
+                    cur.usedQ++;
+                    busy++;
+                }
+
+                // Tăng thời gian chờ cho các tiến trình đang trong Ready Queue
+                for (let l = 0; l < Q.length; l++) {
+                    for (let p of Q[l]) p.wt++;
+                }
+
+                // Kiểm tra hoàn thành
+                if (cur !== null && cur.rem === 0) {
+                    cur.ct = t + 1;
+                    done++;
+                    logEv(t + 1, cur.pid, 'Running', 'Terminated', 'Hoàn thành tiến trình');
+                    cur = null;
+                }
+
+                t++;
+            }
+
+            // Ghi nhận snapshot cuối cùng tại t = T
+            recordSnapshot(t);
+
+            const T = t;
+            const m = P.map(p => ({
+                idx: p.idx,
+                pid: p.pid,
+                name: p.name,
+                type: p.type,
+                at: p.at,
+                cpu: p.cpu,
+                io: p.io,
+                pr: p.pr,
+                ct: p.ct,
+                firstRun: p.firstRun, tat: p.ct - p.at,
+                wt: p.ct - p.at - p.cpu,
+                rt: p.firstRun - p.at
+            }));
+            const avg = k => m.reduce((s, x) => s + x[k], 0) / n;
+            const mq = Math.max(...snapshots.map(s => s.readyList.length));
+            return {
+                g: gantt,
+                m,
+                P,
+                T,
+                wt: avg('wt'),
+                tat: avg('tat'),
+                rt: avg('rt'),
+                thr: T > 0 ? (n / T) : 0,
+                u: T > 0 ? (busy / T * 100) : 0,
+                cs,
+                mq,
+                mw: Math.max(...m.map(x => x.wt)),
+                snapshots,
+                events
+            };
+        }
+
+        const cmp = P => AL.map(a => ({ id: a[0], r: sim(P, a[0], S.q, S.pp) }));
+
+        /* =========================================================================
+           4. BẢNG SO SÁNH 7 THUẬT TOÁN
+        ========================================================================= */
+        function cmpT(rows) {
+            if (!rows || !rows.length) return '';
+            const f = (k, b) => Math[b == 'max' ? 'max' : 'min'](...rows.map(x => x.r[k])),
+                c = (x, k, d, b) => `<td class="${x.r[k] == f(k, b) ? 'bst' : ''}">${x.r[k].toFixed(d)}`;
+            return `<div class="sc"><table><tr><th>Thuật toán<th>TB chờ<th>TB quay vòng<th>TB phản hồi<th>Throughput<th>CPU %<th>Đổi ngữ cảnh<th>Chờ tối đa</tr>` +
+                rows.map(x => `<tr><td><b>${NM[x.id]}</b>${c(x, 'wt', 2)}${c(x, 'tat', 2)}${c(x, 'rt', 2)}${c(x, 'thr', 3, 'max')}${c(x, 'u', 1, 'max')}${c(x, 'cs', 0)}${c(x, 'mw', 0)}</tr>`).join('') +
+                `</table></div><p class="mu">Ô màu xanh đậm là giá trị tốt nhất theo từng chỉ số giữa 7 thuật toán.</p>`;
+        }
+
+        /* =========================================================================
+           5. HIỂN THỊ BIỂU ĐỒ GANTT, TRỤC THỜI GIAN & CON TRỎ HIỆN TẠI
+        ========================================================================= */
+        function gantt(r, upto) {
+            upto = (upto == null) ? r.T : Math.max(0, Math.min(r.T, upto));
+            const minW = Math.min(Math.max(r.T * 26, 320), 2800);
+            const curPercent = r.T > 0 ? (upto / r.T * 100) : 0;
+
+            // Xây dựng mốc trên trục thời gian
+            let step = 1;
+            if (r.T > 80) step = 10;
+            else if (r.T > 40) step = 5;
+            else if (r.T > 20) step = 2;
+            const ticks = [];
+            for (let ti = 0; ti <= r.T; ti += step) ticks.push(ti);
+            if (ticks[ticks.length - 1] !== r.T) ticks.push(r.T);
+
+            const axisHtml = `<div class="gt-axis">` + ticks.map(ti => {
+                const pos = (ti / r.T * 100);
+                return `<span class="gt-tick" style="left:${pos}%">${ti}</span>`;
+            }).join('') + `</div>`;
+
+            // Khối tiến trình
+            const blocksHtml = r.g.map((s, k, ar) => {
+                const dur = s.e - s.s;
+                const isIdle = s.pid < 0;
+                let cls = 'sg' + (isIdle ? ' idle' : '');
+                if (s.e <= upto) cls += ' past';
+                else if (s.s <= upto && upto < s.e) cls += ' active';
+                else cls += ' future';
+
+                const bg = isIdle ? '' : `background:${COL[s.pid % 10]};`;
+                const label = isIdle ? 'IDLE' : 'P' + s.pid;
+                const title = isIdle ? `CPU rỗi: ${s.s}–${s.e}` : `P${s.pid}: ${s.s}–${s.e} (thời lượng: ${dur})`;
+                return `<div class="${cls}" style="flex:${dur};${bg}" title="${title}">${label}<small>${s.s}</small>${k == ar.length - 1 ? `<small class="en">${s.e}</small>` : ''}</div>`;
+            }).join('');
+
+            // Chú giải màu sắc
+            const uniquePids = [...new Set(r.g.filter(s => s.pid >= 0).map(s => s.pid))].sort((a,b)=>a-b);
+            const legendHtml = `<div class="lgd">` +
+                uniquePids.map(pid => `<span><i style="background:${COL[pid % 10]}"></i>P${pid}</span>`).join('') +
+                `<span><i style="background:var(--bd);border:1px dashed var(--mu)"></i>CPU rỗi</span>` +
+                `<span><i style="background:#ef4444"></i>Con trỏ thời điểm t = ${upto}</span>` +
+                `</div>`;
+
+            return `<div class="gt-wrap"><div class="gt-scroll"><div class="gt-inner" style="min-width:${minW}px">` +
+                `<div class="gt-cur-line" style="left:${curPercent}%"></div>` +
+                `<div class="gt">${blocksHtml}</div>` +
+                axisHtml +
+                `</div></div>${legendHtml}</div>`;
+        }
+
+        /* =========================================================================
+           6. HÀNG ĐỢI SẴN SÀNG (READY QUEUE) TẠI THỜI ĐIỂM t
+        ========================================================================= */
+        function readyQueueView(snapshot) {
+            if (!snapshot || !snapshot.readyList.length) {
+                return `<div class="rq-wrap"><span class="rq-lbl">${svg('list', 16, 2)} Hàng đợi sẵn sàng:</span><span class="mu">Trống (Không có tiến trình nào đang chờ cấp CPU)</span></div>`;
+            }
+            const items = snapshot.readyList.map((p, idx) => {
+                const bg = COL[p.pid % 10];
+                const extra = (p.lvl != null && S.algo.startsWith('ML') ? ` | Q${p.lvl}` : '') + (p.pr != null ? ` | Ưu tiên ${p.pr}` : '');
+                return `<span class="rq-item"><b style="background:${bg}">P${p.pid}</b> ${p.name} <span class="mu">(còn ${p.rem}s${extra})</span></span>`;
+            }).join('<span class="rq-arr">→</span>');
+            return `<div class="rq-wrap"><span class="rq-lbl">${svg('list', 16, 2)} Hàng đợi sẵn sàng (${snapshot.readyList.length}):</span>${items}</div>`;
+        }
+
+        /* =========================================================================
+           7. SƠ ĐỒ TRẠNG THÁI TIẾN TRÌNH TẠI THỜI ĐIỂM t
+        ========================================================================= */
+        const STN = ['New', 'Ready', 'Running', 'Waiting/Blocked', 'Terminated'];
+        const STC = ['#7c8aa5', '#2563eb', '#16a34a', '#d97706', '#64748b'];
+
+        function stateView(r, t) {
+            t = Math.max(0, Math.min(r.T, t));
+            const snap = r.snapshots[t] || r.snapshots[r.snapshots.length - 1];
+            const pStats = snap.procStats;
+            const byState = k => pStats.filter(p => {
+                if (k === 0) return p.state === 'New';
+                if (k === 1) return p.state === 'Ready';
+                if (k === 2) return p.state === 'Running';
+                if (k === 3) return p.state === 'Waiting';
+                if (k === 4) return p.state === 'Terminated';
+                return false;
+            });
+
+            // Kích thước SVG
+            const W = 103, G = 22, X = k => k * (W + G);
+            const mx = Math.max(1, ...[0, 1, 2, 4].map(k => byState(k).length));
+            const H = 40 + Math.ceil(mx / 3) * 24 + 8;
+            const WY = H + 54, TH = WY + 56, WW = 190;
+            const mid = (X(1) + W / 2 + X(2) + W / 2) / 2;
+            const c1 = X(1) + W / 2, c2 = X(2) + W / 2;
+
+            const recentEvents = snap.eventsUpToT.slice(-6).reverse();
+            const lastEv = recentEvents[0];
+            const hasAct = a => lastEv && lastEv.t === t;
+
+            const ar = (id, d, dash) => `<path class="ar${dash ? ' dash' : ''}${hasAct(id) ? ' on' : ''}" d="${d}" marker-end="url(#${hasAct(id) ? 'mo' : 'mh'})"/>`;
+
+            const node = (k, x, y, w, h, dash) => {
+                const list = byState(k);
+                const c = STC[k];
+                const act = list.length > 0;
+                return `<g><rect class="nd${dash ? ' dash' : ''}" x="${x}" y="${y}" width="${w}" height="${h}" rx="12" style="${act ? 'stroke:' + c : ''}"/>` +
+                    (act ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${c}" fill-opacity=".08"/>` : '') +
+                    `<circle cx="${x + 9}" cy="${y + 17}" r="3.5" fill="${c}"/><text x="${x + 17}" y="${y + 21}">${STN[k]}</text><text class="cn" x="${x + w - 7}" y="${y + 21}" style="${act ? 'fill:' + c : ''}">${list.length}</text>` +
+                    (k === 3 ? `<text class="sub" x="${x + 17}" y="${y + 40}">Chưa áp dụng (mô hình lập lịch CPU thuần)</text>` : '') +
+                    list.map((p, j) => {
+                        const px = x + 8 + (j % 3) * 29;
+                        const py = y + 34 + Math.floor(j / 3) * 24;
+                        return `<g><title>P${p.pid} – ${p.name}: ${STN[k]}</title><rect x="${px}" y="${py}" width="26" height="20" rx="6" fill="${COL[p.pid % 10]}"/><text class="cp" x="${px + 13}" y="${py + 14.5}">P${p.pid}</text></g>`;
+                    }).join('') + `</g>`;
+            };
+
+            return `<svg class="sd" viewBox="0 0 480 ${TH}" role="img" aria-label="Sơ đồ trạng thái tiến trình tại t = ${t}"><defs><marker id="mh" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mh" d="M1 1L9 5L1 9z"/></marker><marker id="mo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mo" d="M1 1L9 5L1 9z"/></marker></defs>` +
+                ar('nr', `M${X(0) + W + 1} 22H${X(1) - 3}`) +
+                ar('dp', `M${X(1) + W + 1} 16H${X(2) - 3}`) +
+                ar('pe', `M${X(2) - 1} 34H${X(1) + W + 3}`) +
+                ar('tm', `M${X(2) + W + 1} 22H${X(3) - 3}`) +
+                ar('rw', `M${c2} ${H + 1}V${WY - 3}`, 1) +
+                ar('wr', `M${c1} ${WY - 1}V${H + 3}`, 1) +
+                node(0, X(0), 0, W, H) +
+                node(1, X(1), 0, W, H) +
+                node(2, X(2), 0, W, H) +
+                node(4, X(3), 0, W, H) +
+                node(3, mid - WW / 2, WY, WW, 52, 1) +
+                `</svg>` +
+                `<ul class="evl">${recentEvents.length ? recentEvents.map(e => `<li><span class="tm">t = ${e.t}</span><span class="pc" style="background:${COL[e.pid % 10]}">P${e.pid}</span><span class="st2" style="color:${STC[STN.indexOf(e.from)]||'#666'}">${e.from}</span>${svg('arrow', 14, 2)}<span class="st2" style="color:${STC[STN.indexOf(e.to)]||'#666'}">${e.to}</span><span class="mu">(${e.reason})</span></li>`).join('') : '<li class="mu">Chưa có sự kiện chuyển trạng thái.</li>'}</ul>` +
+                `<p class="mu note">Waiting/Blocked được giữ trong sơ đồ cho đủ chuẩn 5 trạng thái của Hệ điều hành; I/O Burst hiện mang tính hiển thị mở rộng, mô hình lập lịch CPU tập trung vào quá trình thực thi trên CPU.</p>`;
+        }
+
+        /* =========================================================================
+           8. BẢNG TIẾN TRÌNH & CHỈ SỐ ĐỒNG BỘ THEO THỜI ĐIỂM t
+        ========================================================================= */
+        function processTableHTML(r, t) {
+            t = Math.max(0, Math.min(r.T, t));
+            const snap = r.snapshots[t] || r.snapshots[r.snapshots.length - 1];
+            return `<table><tr><th>PID<th>Tên tiến trình<th>Loại<th>Arrival<th>CPU Burst<th>Priority<th>Trạng thái (t)<th>CPU còn lại<th>Thời gian chờ (t)<th>Bắt đầu (RT)<th>Hoàn tất (CT)<th>Quay vòng (TAT)</tr>` +
+                snap.procStats.map(p => {
+                    const isRunning = p.state === 'Running';
+                    const tagClass = 'tag ' + p.state.toLowerCase();
+                    const rtStr = p.rt !== null ? p.rt : '--';
+                    const ctStr = p.ct !== null ? p.ct : (p.state === 'Terminated' ? p.ct : '--');
+                    const tatStr = (p.ct !== null || p.at <= t) ? p.tat : '--';
+                    return `<tr class="${isRunning ? 'tr-active' : ''}">` +
+                        `<td><b>P${p.pid}</b></td>` +
+                        `<td>${p.name}</td>` +
+                        `<td>${p.type}</td>` +
+                        `<td>${p.at}</td>` +
+                        `<td>${p.cpu}</td>` +
+                        `<td>${p.pr}</td>` +
+                        `<td><span class="${tagClass}">${p.state}</span></td>` +
+                        `<td>${p.rem} / ${p.cpu}</td>` +
+                        `<td>${p.wt}</td>` +
+                        `<td>${rtStr}</td>` +
+                        `<td>${ctStr}</td>` +
+                        `<td>${tatStr}</td>` +
+                        `</tr>`;
+                }).join('') + `</table>`;
+        }
+
+        function kpiCardsHTML(r, t) {
+            t = Math.max(0, Math.min(r.T, t));
+            const snap = r.snapshots[t] || r.snapshots[r.snapshots.length - 1];
+            return `<div><b>${r.wt.toFixed(2)}</b>TB thời gian chờ (khi xong)</div>` +
+                `<div><b>${r.tat.toFixed(2)}</b>TB quay vòng (khi xong)</div>` +
+                `<div><b>${r.rt.toFixed(2)}</b>TB phản hồi</div>` +
+                `<div><b>${snap.u.toFixed(1)}%</b>CPU mô phỏng (tại t=${t})</div>` +
+                `<div><b>${snap.thr.toFixed(3)}</b>Throughput (tại t=${t})</div>` +
+                `<div><b>${snap.cs}</b>Đổi ngữ cảnh (tại t=${t})</div>`;
+        }
+
+        function simStat(r, t) {
+            if (t >= r.T) return ['Hoàn tất: mọi tiến trình đã Terminated.', 0];
+            if (t <= 0) return ['Sẵn sàng. Nhấn Chạy hoặc Bước kế để bắt đầu.', 0];
+            const sl = r.g.find(s => s.s <= t - 1 && t - 1 < s.e);
+            return sl && sl.pid >= 0 ? [`CPU đang xử lý P${sl.pid} trong khoảng [${t - 1}, ${t}).`, 1] : [`CPU rỗi (IDLE) trong khoảng [${t - 1}, ${t}).`, 0];
+        }
+
+        /* =========================================================================
+           9. ĐIỀU KHIỂN MÔ PHỎNG & ĐỒNG BỘ GIAO DIỆN
+        ========================================================================= */
+        function getActiveSim() {
+            if (S.view === 'load' && S.loadSim) return S.loadSim;
+            return S.r;
+        }
+
+        function simBtn() {
+            const r = getActiveSim();
+            if (!$('#bRun') || !r) return;
+            const curT = (S.view === 'load') ? S.loadCur : S.cur;
+            $('#bRun').disabled = !!S.tm;
+            $('#bStop').disabled = !S.tm;
+            $('#bStep').disabled = !!S.tm || curT >= r.T;
+        }
+
+        function simView(t) {
+            const r = getActiveSim();
+            if (!r) return;
+            t = Math.max(0, Math.min(r.T, t));
+            if (S.view === 'load') S.loadCur = t;
+            else S.cur = t;
+
+            const o = $('#gg .gt-scroll');
+            const sl = o ? o.scrollLeft : 0;
+
+            if ($('#gg')) $('#gg').innerHTML = gantt(r, t);
+            if ($('#rq')) $('#rq').innerHTML = readyQueueView(r.snapshots[t]);
+            if ($('#sd')) $('#sd').innerHTML = stateView(r, t);
+            if ($('#pt-sim')) $('#pt-sim').innerHTML = processTableHTML(r, t);
+            if ($('#kpi-sim')) $('#kpi-sim').innerHTML = kpiCardsHTML(r, t);
+
+            if ($('#tv')) $('#tv').textContent = t;
+            if ($('#ts')) $('#ts').value = t;
+
+            const [m, on] = simStat(r, t);
+            const e = $('#ss');
+            if (e) {
+                e.className = 'ss' + (on ? ' on' : '');
+                e.innerHTML = `<i></i>${m}`;
+            }
+
+            // Tự động cuộn mượt theo con trỏ Gantt
+            const n = $('#gg .gt-scroll');
+            if (n && r.T > 0) {
+                const targetX = (n.scrollWidth - 20) * (t / r.T);
+                if (targetX > sl + n.clientWidth - 50) {
+                    n.scrollLeft = targetX - n.clientWidth + 80;
+                } else if (targetX < sl) {
+                    n.scrollLeft = Math.max(0, targetX - 40);
+                }
+            }
+            simBtn();
+        }
+
+        function simStop() {
+            if (S.tm) {
+                clearInterval(S.tm);
+                S.tm = null;
+            }
+            simBtn();
+        }
+
+        function simTick() {
+            const r = getActiveSim();
+            if (!r || (!$('#gg'))) return simStop();
+            const curT = (S.view === 'load') ? S.loadCur : S.cur;
+            simView(curT + 1);
+            const nextT = (S.view === 'load') ? S.loadCur : S.cur;
+            if (nextT >= r.T) simStop();
+        }
+
+        function simRun() {
+            if (S.tm) return;
+            const r = getActiveSim();
+            if (!r) return;
+            const curT = (S.view === 'load') ? S.loadCur : S.cur;
+            if (curT >= r.T) simView(0);
+            const spd = +($('#spd')?.value || 700);
+            S.tm = setInterval(simTick, spd);
+            simBtn();
+        }
+
+        function simStep() {
+            simStop();
+            const curT = (S.view === 'load') ? S.loadCur : S.cur;
+            simView(curT + 1);
+        }
+
+        function simReset() {
+            simStop();
+            simView(0);
+        }
+
+        function simSpd() {
+            if (S.tm) {
+                simStop();
+                simRun();
+            }
+        }
+
+        function simUI(r, t) {
+            const [m, on] = simStat(r, t);
+            return `<div class="card ctl">` +
+                `<div class="cb">` +
+                `<button class="bt" id="bRun" onclick="simRun()">${svg('run', 16, 2)}Chạy</button>` +
+                `<button class="bt g" id="bStop" onclick="simStop()" disabled>${svg('pause', 16, 2)}Dừng</button>` +
+                `<button class="bt g" id="bStep" onclick="simStep()" disabled>${svg('step', 16, 2)}Bước kế</button>` +
+                `<button class="bt g" onclick="simReset()">${svg('reset', 16, 2)}Đặt lại</button>` +
+                `<label>Tốc độ <select id="spd" onchange="simSpd()"><option value="1200">Chậm</option><option value="700" selected>Vừa</option><option value="300">Nhanh</option></select></label>` +
+                `</div>` +
+                `<div class="tl"><input id="ts" type="range" min="0" max="${r.T}" value="${t}" aria-label="Thời điểm mô phỏng" oninput="simStop();simView(+this.value)"><span>t = <b id="tv">${t}</b> / ${r.T}</span></div>` +
+                `<p id="ss" class="ss${on ? ' on' : ''}"><i></i>${m}</p>` +
+                `</div>` +
+                `<div class="sim">` +
+                `<div class="card"><h3>Biểu đồ Gantt & Trục thời gian</h3><p class="mu">Mỗi khối thể hiện khoảng thời gian tiến trình được cấp CPU. Khối viền sáng là tiến trình đang chạy tại t=${t}.</p><div id="gg">${gantt(r, t)}</div></div>` +
+                `<div id="rq">${readyQueueView(r.snapshots[t])}</div>` +
+                `<div class="card"><h3>Sơ đồ trạng thái tiến trình</h3><p class="mu">Phân loại và hiển thị trực quan các tiến trình theo 5 trạng thái tại thời điểm t=${t}.</p><div id="sd">${stateView(r, t)}</div></div>` +
+                `</div>`;
+        }
+
+        const ctrl = (pg) => `<select aria-label="Thuật toán" onchange="S.algo=this.value;go('${pg}',1)">${!S.algo ? '<option value="" disabled selected>-- Chọn thuật toán --</option>' : ''}${AL.map(a => `<option value="${a[0]}" ${a[0] == S.algo ? 'selected' : ''}>${NM[a[0]]}</option>`).join('')}</select> Time Quantum <input type="number" min="1" value="${S.q}" style="width:68px" onchange="S.q=Math.max(1,+this.value||1);go('${pg}',1)"> <label><input type="checkbox" ${S.pp ? 'checked' : ''} onchange="S.pp=this.checked;go('${pg}',1)"> Priority có ngắt</label>`;
+
+        /* =========================================================================
+           10. QUẢN LÝ TIẾN TRÌNH & DESKTOP
+        ========================================================================= */
+        const ni = (p, k) => `<input type="number" min="${k == 'cpu' ? 1 : 0}" value="${p[k]}" onchange="U(${p.pid},'${k}',this.value)">`;
+        const U = (id, k, v) => {
+            const p = S.procs.find(x => x.pid == id);
+            if (p) p[k] = Math.max(k == 'cpu' ? 1 : 0, +v || 0);
+            S.fin = false;
+            tbl();
+        };
+        const del = id => {
+            S.procs = S.procs.filter(p => p.pid != id);
+            tbl();
+        };
+
+        function tbl() {
+            if (!$('#pt')) return;
+            $('#pt').innerHTML = `<table><tr><th>PID<th>Tên tiến trình<th>Loại<th>Arrival<th>CPU Burst<th>I/O Burst<th>Priority<th>Trạng thái<th>Xóa</tr>` +
+                (S.procs.length ? S.procs.map(p => `<tr><td><b>P${p.pid}</b><td>${p.name}<td>${p.type}<td>${ni(p, 'at')}<td>${ni(p, 'cpu')}<td>${ni(p, 'io')}<td>${ni(p, 'pr')}<td><span class="tag ${S.fin ? 'terminated' : 'ready'}">${S.fin ? 'Terminated' : 'Ready'}</span><td><button class="bt g x" onclick="del(${p.pid})" aria-label="Xóa">${svg('x', 16)}</button></tr>`).join('') :
+                `<tr><td colspan="9" class="mu" style="text-align:center;padding:24px">Chưa có tiến trình. Mở một ứng dụng trên máy tính ảo hoặc nhấn “Nạp tập mẫu” để bắt đầu.</td></tr>`) +
+                `</table>`;
+        }
+
+        function sample() {
+            S.procs = [];
+            [[0, 5, 2], [1, 3, 1], [2, 8, 4], [3, 2, 3], [4, 4, 2]].forEach(([a, c, p], idx) => {
+                S.procs.push({ pid: idx + 1, name: 'Tiến trình ' + (idx + 1), type: 'HH', at: a, cpu: c, io: 0, pr: p });
+            });
+            S.pid = 6;
+            S.fin = false;
+            tbl();
+        }
+
+        function addP(e) {
+            e.preventDefault();
+            const f = e.target.elements;
+            S.procs.push({
+                pid: S.pid++,
+                name: f.nm.value || ('Tiến trình ' + S.pid),
+                type: f.ty.value,
+                at: +f.at.value || 0,
+                cpu: Math.max(1, +f.cpu.value || 1),
+                io: +f.io.value || 0,
+                pr: +f.pr.value || 0
+            });
+            S.fin = false;
+            tbl();
+            return false;
+        }
+
+        function spawn(i) {
+            const a = APPS[i], j = Math.floor(Math.random() * 3) - 1;
+            const p = {
+                pid: S.pid++,
+                name: a[0],
+                type: a[2],
+                at: Math.floor((Date.now() - S.t0) / 3000),
+                cpu: Math.max(1, a[3] + j),
+                io: a[4],
+                pr: a[5]
+            };
+            S.procs.push(p);
+            S.fin = false;
+            tbl();
+            return p;
+        }
+
+        function tb() {
+            $('#tbi').innerHTML = [...document.querySelectorAll('.win')].map(w => `<span>${ico(w.dataset.ic, 20)}</span>`).join('');
+        }
+
+        function openApp(i) {
+            const a = APPS[i], p = spawn(i), w = document.createElement('div'), k = S.wn++ % 6;
+            w.className = 'win';
+            w.dataset.ic = a[1];
+            w.style.left = (230 + k * 28) + 'px';
+            w.style.top = (20 + k * 26) + 'px';
+            w.style.zIndex = ++S.z;
+            w.innerHTML = `<div class="wh"><span class="wt" data-t="${a[0]}">${ico(a[1], 18)}</span><button aria-label="Đóng">${svg('x', 14)}</button></div><div class="wb"><p>${a[6]}</p>${i == 5 ? '<textarea placeholder="Nhập văn bản..."></textarea>' : ''}<p class="mu">Đã tạo tiến trình <b>P${p.pid}</b>: CPU Burst ${p.cpu}, I/O Burst ${p.io}, Priority ${p.pr}.</p><button class="bt">Tạo thêm tiến trình</button></div>`;
+            const h = w.querySelector('.wh');
+            h.onpointerdown = e => {
+                if (e.target.tagName == 'BUTTON') return;
+                w.style.zIndex = ++S.z;
+                const dx = e.clientX - w.offsetLeft, dy = e.clientY - w.offsetTop;
+                h.setPointerCapture(e.pointerId);
+                h.onpointermove = e => {
+                    w.style.left = Math.max(0, e.clientX - dx) + 'px';
+                    w.style.top = Math.max(0, e.clientY - dy) + 'px';
+                };
+                h.onpointerup = () => { h.onpointermove = null; };
+            };
+            w.onpointerdown = () => { w.style.zIndex = ++S.z; };
+            h.querySelector('button').onclick = () => { w.remove(); tb(); };
+            w.querySelector('.bt').onclick = () => {
+                const q = spawn(i);
+                w.querySelector('.mu').innerHTML += ` Thêm <b>P${q.pid}</b>.`;
+            };
+            $('#dk').appendChild(w);
+            tb();
+        }
+
+        function clk() {
+            const d = new Date();
+            const el = $('#clk');
+            if (el) el.innerHTML = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + '<br>' + d.toLocaleDateString('vi-VN');
+        }
+
+        /* =========================================================================
+           11. KỊCH BẢN TẢI CPU & ÁP DỤNG THUẬT TOÁN ĐỀ XUẤT (Section 8)
+        ========================================================================= */
+        function mkLoad() {
+            simStop();
+            S.sc = $('#sc').value;
+            S.n = Math.min(40, Math.max(5, +$('#nn').value || 12));
+            const n = S.n, sc = S.sc, R = (a, b) => a + Math.floor(Math.random() * (b - a + 1)), P = [];
+            for (let i = 0; i < n; i++) {
+                let at, cpu, type = 'HH', pr = R(1, 5);
+                if (sc == 'burst') { at = R(0, 2); cpu = R(2, 8); }
+                else if (sc == 'cpu') { at = R(0, Math.floor(n * 0.8)); cpu = R(10, 20); type = 'CPU'; }
+                else if (sc == 'mixed') { at = R(0, n * 2); if (i % 2) { type = 'IO'; cpu = R(1, 4); } else { type = 'CPU'; cpu = R(8, 15); } }
+                else if (sc == 'inter') { if (i == 0) { at = 0; cpu = 20; type = 'CPU'; pr = 4; } else { at = R(0, Math.round(n * 1.5)); cpu = R(1, 3); type = 'IO'; pr = R(1, 3); } }
+                else if (sc == 'hiprio') { at = R(0, n * 2); if (i % 5 == 0) { pr = 5; cpu = R(5, 9); } else { pr = R(1, 2); cpu = R(3, 7); } }
+                else { // starve
+                    if (i == 0) { at = 0; cpu = 6; pr = 9; }
+                    else { at = i * 2 - 1; cpu = R(3, 5); pr = 1; }
+                }
+                P.push({ pid: i + 1, name: 'Tác vụ ' + (i + 1), type, at, cpu, io: type == 'IO' ? R(1, 4) : 0, pr });
+            }
+            S.load = { P, sc, appliedAlgo: null };
+            S.loadSim = sim(P, S.algo, S.q, S.pp);
+            S.loadCur = S.loadSim.T;
+            go('load', 1);
+        }
+
+        function applyAlgo(algoId) {
+            if (!S.load) return;
+            simStop();
+            S.algo = algoId;
+            S.load.appliedAlgo = algoId;
+            // Đồng bộ tập tiến trình sang workspace chung
+            S.procs = S.load.P.map(p => ({ ...p }));
+            S.fin = false;
+            // Tính toán lại ngay lập tức bằng thuật toán mới
+            S.loadSim = sim(S.load.P, algoId, S.q, S.pp);
+            S.r = S.loadSim;
+            S.loadCur = S.loadSim.T;
+            S.cur = S.r.T;
+            go('load', 1);
+        }
+
+        /* =========================================================================
+           12. CÁC TRANG NỘI DUNG (VIEWS)
+        ========================================================================= */
+        const V = {
+            home() {
+                const n = S.procs.length;
+                const kp = (ic, v, l, g) => `<div><span class="bd ${g ? 'g' : ''}">${svg(ic, 24)}</span><b>${v}</b>${l}</div>`;
+                const fc = c => `<div class="card fc"><span class="bd">${svg(c[0], 24)}</span><h3>${c[1]}</h3><p class="mu">${c[2]}</p><button class="bt g sm" onclick="go('${c[3]}')">Mở</button></div>`;
+                return `<section class="pg"><div class="hero"><div class="hc"><span class="ey">CPU SCHEDULING SIMULATOR</span><h1>Mô phỏng lập lịch CPU</h1><p>Tạo các tiến trình, chọn thuật toán và quan sát cách CPU được phân bổ qua biểu đồ Gantt, hàng đợi sẵn sàng, sơ đồ trạng thái và các chỉ số hiệu suất chuẩn xác.</p><button class="bt hb" onclick="go('vm')">Vào máy tính ảo ${svg('arrow', 18, 2)}</button></div><div class="hv">${HERO_SVG}</div></div>
+<div class="kpi">${kp('list', n, 'Tiến trình đã tạo')}${kp('clock', S.fin ? 0 : n, 'Đang chờ')}${kp('check', S.fin ? n : 0, 'Đã hoàn thành', 1)}${kp('nodes', (S.algo && NM[S.algo]) ? NM[S.algo] : '-', 'Thuật toán đang chọn')}</div>
+<div class="grid">${[['monitor', 'Máy tính ảo', 'Mô phỏng ứng dụng, sinh tiến trình mô phỏng.', 'vm'], ['bars', 'Thuật toán', 'Nguyên lý, ưu và nhược điểm của 7 thuật toán.', 'alg'], ['gauge', 'Phân tích tải CPU', 'Tạo kịch bản quá tải, phân tích và áp dụng thuật toán tối ưu.', 'load'], ['chart', 'Kết quả', 'Gantt, chỉ số, sơ đồ trạng thái và so sánh 7 thuật toán.', 'res']].map(fc).join('')}</div></section>`;
+            },
+
+            alg() {
+                const AL_TAGS = {
+                    FCFS: { mode: 'Không ngắt (Non-preemptive)', badge: 'FCFS' },
+                    SJF: { mode: 'Không ngắt (Non-preemptive)', badge: 'SJF' },
+                    SRTF: { mode: 'Có ngắt (Preemptive)', badge: 'SRTF' },
+                    PRIO: { mode: 'Hỗ trợ ngắt & không ngắt', badge: 'Priority' },
+                    RR: { mode: 'Có ngắt (Time Quantum)', badge: 'Round Robin' },
+                    MLQ: { mode: 'Đa cấp cố định (Multilevel)', badge: 'MLQ' },
+                    MLFQ: { mode: 'Đa cấp phản hồi (Feedback)', badge: 'MLFQ' }
+                };
+
+                return `<section class="pg"><h1>Các thuật toán lập lịch</h1><p class="mu">Bấm “Chạy thuật toán này” để mô phỏng tập tiến trình hiện tại. Với Priority, số nhỏ nghĩa là ưu tiên cao.</p><div class="alg-grid">` +
+                    AL.map(a => {
+                        const meta = AL_TAGS[a[0]] || { mode: 'Tiêu chuẩn', badge: a[0] };
+                        return `<div class="card alg-card">` +
+                            `<div class="alg-head"><div><h3>${NM[a[0]]}</h3><span class="alg-mode">${meta.mode}</span></div><span class="alg-badge">${meta.badge}</span></div>` +
+                            `<div class="alg-body">` +
+                            `<p class="alg-desc">${a[1]}</p>` +
+                            `<div class="alg-details">` +
+                            `<div class="alg-box ok-box"><b class="ok">Ưu điểm:</b> ${a[2]}</div>` +
+                            `<div class="alg-box over-box"><b class="hi">Hạn chế:</b> ${a[3]}</div>` +
+                            `</div>` +
+                            `</div>` +
+                            `<div class="alg-footer"><button class="bt" onclick="S.algo='${a[0]}';go('res')">${svg('run', 15, 2)}Chạy thuật toán này</button></div>` +
+                            `</div>`;
+                    }).join('') +
+                    `</div></section>`;
+            },
+
+            res() {
+                if (!S.procs.length) {
+                    return `<section class="pg"><h1>Kết quả mô phỏng</h1><p class="mu">Chưa có tiến trình để mô phỏng.</p><button class="bt" onclick="sample();go('res')">Nạp tập mẫu</button> <button class="bt g" onclick="go('vm')">Tạo trên máy tính ảo</button></section>`;
+                }
+                S.fin = true;
+                simStop();
+                if (!S.algo) S.algo = 'FCFS';
+                const r = S.r = sim(S.procs, S.algo, S.q, S.pp);
+                S.cur = r.T;
+                const t = S.cur;
+
+                return `<section class="pg"><h1>Kết quả mô phỏng: ${NM[S.algo]}</h1>` +
+                    `<p class="mu">${AL.find(a => a[0] == S.algo)?.[1] || ''}</p>` +
+                    `<div class="bar">${ctrl('res')}</div>` +
+                    `<h2>Mô phỏng theo thời gian thực</h2>${simUI(r, t)}` +
+                    `<h2>Chi tiết tiến trình tại t = <span id="tv-tbl">${t}</span></h2>` +
+                    `<div class="sc" id="pt-sim">${processTableHTML(r, t)}</div>` +
+                    `<h2>Chỉ số hiệu suất</h2>` +
+                    `<div class="kpi" id="kpi-sim">${kpiCardsHTML(r, t)}</div>` +
+                    `<h2>So sánh 7 thuật toán trên cùng tập tiến trình</h2>${cmpT(cmp(S.procs))}</section>`;
+            },
+
+            load() {
+                let h = `<section class="pg"><h1>Phân tích tải CPU</h1><p class="mu">Tạo kịch bản tải thực tế, hệ thống chạy tập tiến trình trên các thuật toán, phân tích nguyên nhân và đề xuất phương án tối ưu.</p>` +
+                    `<div class="bar"><select id="sc" aria-label="Kịch bản">${SC.map(s => `<option value="${s[0]}" ${s[0] == S.sc ? 'selected' : ''}>${s[1]}</option>`).join('')}</select> Số tiến trình <input id="nn" type="number" min="5" max="40" value="${S.n}" style="width:72px"> <button class="bt" onclick="mkLoad()">${svg('run', 16, 2)}Tạo tải và phân tích</button></div>`;
+
+                const L = S.load;
+                if (!L) return h + `<div class="card">Chưa có kịch bản tải. Hãy chọn kịch bản ở trên rồi nhấn “Tạo tải và phân tích”.</div></section>`;
+
+                const scInfo = SC_INFO[L.sc] || SC_INFO.burst;
+                const rows = cmp(L.P);
+                const r = rows.find(x => x.id == (S.algo || 'FCFS'))?.r || rows[0].r;
+                S.loadSim = r;
+                if (S.loadCur == null || S.loadCur > r.T) S.loadCur = r.T;
+                const t = S.loadCur;
+
+                const n = L.P.length;
+                const ac = L.P.reduce((s, p) => s + p.cpu, 0) / n;
+                const ratio = r.wt / ac;
+                const st = ratio >= 4 && r.u > 88 ? ['Quá tải nghiêm trọng', 'over'] : ratio >= 1.5 ? ['Tải cao', 'hi'] : ['Bình thường', 'ok'];
+
+                const d = [];
+                d.push(`Hàng đợi sẵn sàng đạt tối đa ${r.mq} tiến trình. Thời gian chờ trung bình là ${r.wt.toFixed(1)}, gấp ${ratio.toFixed(1)} lần CPU Burst trung bình (${ac.toFixed(1)}).`);
+                const sv = r.m.reduce((a, b) => b.wt > a.wt ? b : a);
+                if (sv.wt >= 2.5 * r.wt && sv.wt - r.wt >= 4) {
+                    d.push(`Phát hiện nguy cơ Starvation: Tác vụ P${sv.pid} (ưu tiên ${sv.pr}, burst ${sv.cpu}) phải chờ ${sv.wt} đơn vị thời gian (gấp ${(sv.wt / Math.max(r.wt, 0.1)).toFixed(1)} lần mức chờ trung bình).`);
+                } else {
+                    d.push('Thời gian chờ giữa các tiến trình tương đối đồng đều, chưa ghi nhận dấu hiệu bị bỏ đói nghiêm trọng.');
+                }
+                const io = r.m.filter(x => x.type == 'IO');
+                if (io.length) {
+                    const ir = io.reduce((s, x) => s + x.rt, 0) / io.length;
+                    d.push(`Thời gian phản hồi trung bình của ${io.length} tác vụ tương tác là ${ir.toFixed(1)} đơn vị thời gian (${ir > 4 ? 'chậm, nên dùng thuật toán có chia lát thời gian như Round Robin hoặc MLFQ' : 'đạt mức tốt'}).`);
+                }
+
+                // Bảng đề xuất thuật toán kèm NÚT ÁP DỤNG
+                const best = k => rows.reduce((a, b) => b.r[k] < a.r[k] ? b : a);
+                const recRows = [
+                    ['Giảm thời gian chờ trung bình', 'wt', 'Chờ TB'],
+                    ['Cải thiện tốc độ phản hồi', 'rt', 'Phản hồi TB'],
+                    ['Tăng tính công bằng, tránh Starvation', 'mw', 'Chờ tối đa']
+                ].map(([goal, metric, metricLabel]) => {
+                    const b = best(metric);
+                    const isApplied = S.algo === b.id;
+                    return `<tr>` +
+                        `<td><b>${NM[b.id]}</b></td>` +
+                        `<td>${goal}</td>` +
+                        `<td>${metricLabel} = ${b.r[metric].toFixed(1)} (tốt nhất trong 7 thuật toán)</td>` +
+                        `<td>${LIM[b.id]}</td>` +
+                        `<td><button class="bt sm ${isApplied ? 'g' : ''}" onclick="applyAlgo('${b.id}')">${isApplied ? '✓ Đang áp dụng' : 'Áp dụng'}</button></td>` +
+                        `</tr>`;
+                }).join('');
+
+                const appliedBadge = L.appliedAlgo ?
+                    `<div class="card" style="background:var(--okbg);border-color:var(--ok);color:var(--ok);margin-bottom:16px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between"><span><strong>✓ Đã áp dụng thuật toán: ${NM[L.appliedAlgo]}</strong> cho kịch bản này. Kết quả mô phỏng bên dưới đã được tính toán lại.</span><button class="bt sm" onclick="go('res')">Mở trang Kết quả đầy đủ →</button></div>` : '';
+
+                // Bảng tập tiến trình kịch bản
+                const procListHtml = `<div class="sc" style="max-height:220px"><table><tr><th>PID<th>Tên tác vụ<th>Loại<th>Thời điểm đến (Arrival)<th>CPU Burst<th>Priority</tr>` +
+                    L.P.map(p => `<tr><td><b>P${p.pid}</b></td><td>${p.name}</td><td>${p.type}</td><td>${p.at}</td><td>${p.cpu}</td><td>${p.pr}</td></tr>`).join('') +
+                    `</table></div>`;
+
+                return h +
+                    `<div class="card" style="margin-bottom:16px">` +
+                    `<h3>${scInfo.title}</h3>` +
+                    `<p>${scInfo.desc}</p>` +
+                    `<p><b class="hi">Nguyên nhân tải:</b> ${scInfo.cause}</p>` +
+                    `<p><b class="ok">Định hướng giải quyết:</b> ${scInfo.rec}</p>` +
+                    `</div>` +
+                    appliedBadge +
+                    `<h2>Tập tiến trình của kịch bản (${n} tiến trình)</h2>${procListHtml}` +
+                    `<h2>Giám sát mô phỏng kịch bản (${(S.algo && NM[S.algo]) || NM[rows[0].id]})</h2>` +
+                    `<div class="bar">Đang xem theo: ${ctrl('load')}</div>` +
+                    simUI(r, t) +
+                    `<h2>Chỉ số tải và hiệu năng</h2>` +
+                    `<div class="kpi">` +
+                    `<div><b>${r.u.toFixed(1)}%</b>CPU mô phỏng</div>` +
+                    `<div><b>${r.mq}</b>Ready Queue tối đa</div>` +
+                    `<div><b>${r.wt.toFixed(1)}</b>TB thời gian chờ</div>` +
+                    `<div><b>${n}/${n}</b>Hoàn thành sau ${r.T} đv</div>` +
+                    `<div><b>${r.thr.toFixed(3)}</b>Throughput</div>` +
+                    `<div><b class="${st[1]}">${st[0]}</b>Đánh giá tải</div>` +
+                    `</div>` +
+                    `<div class="card"><h3 style="margin-top:0">Nhận xét chuyên sâu từ kết quả mô phỏng</h3><ul>${d.map(x => `<li>${x}</li>`).join('')}</ul></div>` +
+                    `<h2>Thuật toán đề xuất & Hành động</h2>` +
+                    `<div class="sc"><table><tr><th>Thuật toán<th>Mục tiêu tối ưu<th>Căn cứ thực nghiệm<th>Đánh đổi cần lưu ý<th>Thao tác</tr>${recRows}</table></div>` +
+                    `<h2>So sánh 7 thuật toán trên tập tiến trình kịch bản này</h2>${cmpT(rows)}</section>`;
+            },
+
+            about() {
+                return `<section class="pg">` +
+                    `<div class="hero">` +
+                    `<div class="hc">` +
+                    `<span class="ey">HỆ ĐIỀU HÀNH • MÔ PHỎNG HỌC THUẬT</span>` +
+                    `<h1>Giới thiệu hệ thống</h1>` +
+                    `<p>CPU Scheduling Simulator là nền tảng mô phỏng tương tác trực quan các thuật toán lập lịch CPU kinh điển, phục vụ giảng dạy, học tập và nghiên cứu môn Hệ điều hành.</p>` +
+                    `<div class="bar" style="margin:0;gap:12px">` +
+                    `<button class="bt hb" onclick="go('home')">Vào Trang chủ ${svg('arrow', 18, 2)}</button>` +
+                    `<button class="bt g" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)" onclick="go('vm')">Máy tính ảo</button>` +
+                    `</div>` +
+                    `</div>` +
+                    `<div class="hv">${HERO_SVG}</div>` +
+                    `</div>` +
+
+                    `<h2>Tính năng cốt lõi của hệ thống</h2>` +
+                    `<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px;">` +
+                    `<div class="card fc" style="align-items:flex-start;text-align:left;padding:22px">` +
+                    `<span class="bd" style="margin:0 0 14px 0">${svg('clock', 24)}</span>` +
+                    `<h3 style="font-size:16px;margin-bottom:6px">Mô phỏng thời gian thực</h3>` +
+                    `<p class="mu" style="max-width:none;font-size:13.5px;margin-bottom:0">Quan sát từng tích tắc CPU được cấp phát. Hỗ trợ Chạy tự động, Tạm dừng, Đi từng bước (Step-by-step), Đặt lại và thanh trượt tua thời gian tùy ý.</p>` +
+                    `</div>` +
+                    `<div class="card fc" style="align-items:flex-start;text-align:left;padding:22px">` +
+                    `<span class="bd g" style="margin:0 0 14px 0">${svg('bars', 24)}</span>` +
+                    `<h3 style="font-size:16px;margin-bottom:6px">7 Thuật toán kinh điển</h3>` +
+                    `<p class="mu" style="max-width:none;font-size:13.5px;margin-bottom:0">Đầy đủ FCFS, SJF, SRTF, Priority (hỗ trợ có ngắt & không ngắt), Round Robin (tùy chỉnh Quantum), Multilevel Queue và Multilevel Feedback Queue.</p>` +
+                    `</div>` +
+                    `<div class="card fc" style="align-items:flex-start;text-align:left;padding:22px">` +
+                    `<span class="bd" style="margin:0 0 14px 0">${svg('nodes', 24)}</span>` +
+                    `<h3 style="font-size:16px;margin-bottom:6px">Sơ đồ 5 trạng thái & Ready Queue</h3>` +
+                    `<p class="mu" style="max-width:none;font-size:13.5px;margin-bottom:0">Trực quan hóa vòng đời tiến trình qua 5 trạng thái chuẩn: New, Ready, Running, Waiting, Terminated đồng bộ tức thời cùng hàng đợi Ready Queue.</p>` +
+                    `</div>` +
+                    `<div class="card fc" style="align-items:flex-start;text-align:left;padding:22px">` +
+                    `<span class="bd g" style="margin:0 0 14px 0">${svg('gauge', 24)}</span>` +
+                    `<h3 style="font-size:16px;margin-bottom:6px">Phân tích tải & Tối ưu hóa</h3>` +
+                    `<p class="mu" style="max-width:none;font-size:13.5px;margin-bottom:0">Giả lập 6 kịch bản tải thực tế (quá tải, CPU-bound, tác vụ tương tác, starvation) và đề xuất thuật toán tối ưu có thể áp dụng ngay lập tức.</p>` +
+                    `</div>` +
+                    `</div>` +
+
+                    `<h2>Quy trình thực thi mô phỏng</h2>` +
+                    `<div class="card" style="padding:24px">` +
+                    `<div class="pipeline">` +
+                    `<div class="pipe-step"><div class="pipe-num">1</div><div><b>Khởi tạo tiến trình</b><p class="mu" style="margin:4px 0 0;font-size:13px">Mở ứng dụng trên máy tính ảo hoặc nhập thời điểm đến (Arrival), CPU Burst và mức ưu tiên (Priority).</p></div></div>` +
+                    `<div class="pipe-sep">→</div>` +
+                    `<div class="pipe-step"><div class="pipe-num">2</div><div><b>Chọn thuật toán</b><p class="mu" style="margin:4px 0 0;font-size:13px">Lựa chọn 1 trong 7 thuật toán và thiết lập các tham số như Time Quantum hoặc chế độ Priority có ngắt.</p></div></div>` +
+                    `<div class="pipe-sep">→</div>` +
+                    `<div class="pipe-step"><div class="pipe-num">3</div><div><b>Mô phỏng & Quan sát</b><p class="mu" style="margin:4px 0 0;font-size:13px">Theo dõi biểu đồ Gantt, trục thời gian, hàng đợi sẵn sàng và sơ đồ chuyển dịch trạng thái theo thời gian thực.</p></div></div>` +
+                    `<div class="pipe-sep">→</div>` +
+                    `<div class="pipe-step"><div class="pipe-num">4</div><div><b>Đánh giá & So sánh</b><p class="mu" style="margin:4px 0 0;font-size:13px">Đối chiếu các chỉ số: Thời gian chờ, Thời gian quay vòng, Phản hồi, CPU Utilization và Throughput giữa các thuật toán.</p></div></div>` +
+                    `</div>` +
+                    `</div>` +
+
+                    `<h2>Công thức tính toán chuẩn học thuật</h2>` +
+                    `<div class="sc"><table>` +
+                    `<tr><th>Chỉ số<th>Ý nghĩa giáo trình<th>Công thức áp dụng</tr>` +
+                    `<tr><td><b>Thời gian quay vòng (TAT)</b><td>Tổng thời gian từ khi tiến trình đến đến khi hoàn tất<td><code>Turnaround Time = Completion Time - Arrival Time</code></td></tr>` +
+                    `<tr><td><b>Thời gian chờ (Waiting Time)</b><td>Tổng thời gian tiến trình phải chờ đợi trong Ready Queue<td><code>Waiting Time = Turnaround Time - CPU Burst</code></td></tr>` +
+                    `<tr><td><b>Thời gian phản hồi (Response Time)</b><td>Thời gian từ khi đến đến lần đầu tiên được cấp CPU<td><code>Response Time = First Run Time - Arrival Time</code></td></tr>` +
+                    `<tr><td><b>Hiệu suất CPU (CPU Utilization)</b><td>Tỷ lệ thời gian CPU bận thực thi tiến trình trên tổng thời gian<td><code>(Tổng thời gian CPU bận / Tổng thời gian mô phỏng) × 100%</code></td></tr>` +
+                    `<tr><td><b>Thông lượng (Throughput)</b><td>Số lượng tiến trình hoàn thành trên một đơn vị thời gian<td><code>Số tiến trình hoàn tất / Tổng thời gian đánh giá</code></td></tr>` +
+                    `<tr><td><b>Chuyển ngữ cảnh (Context Switch)</b><td>Số lần CPU đổi quyền thực thi giữa các tiến trình khác nhau<td><code>Đếm tự động mỗi khi CPU chuyển đổi ngữ cảnh tiến trình</code></td></tr>` +
+                    `</table></div>` +
+
+                    `<div class="card" style="margin-top:28px;background:var(--ac2);border-color:var(--ac);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:24px">` +
+                    `<div><h3 style="margin:0 0 4px;color:var(--ac)">Sẵn sàng bắt đầu mô phỏng?</h3><p class="mu" style="margin:0;font-size:13.5px">Truy cập Trang chủ hoặc Máy tính ảo để nạp dữ liệu và trải nghiệm trực quan ngay.</p></div>` +
+                    `<div style="display:flex;gap:10px"><button class="bt" onclick="go('home')">Vào Trang chủ</button><button class="bt g" onclick="go('vm')">Máy tính ảo</button></div>` +
+                    `</div></section>`;
+            },
+
+            contact() {
+                return `<section class="pg">` +
+                    `<div class="hero" style="background: linear-gradient(135deg, #1e3a8a, #0284c7); margin-bottom: 24px; padding: 36px 40px;">` +
+                    `<div class="hc" style="max-width:none">` +
+                    `<span class="ey" style="color:#bae6fd">KẾT NỐI & HỖ TRỢ HỌC THUẬT</span>` +
+                    `<h1 style="font-size:32px">Liên hệ & Đóng góp ý kiến</h1>` +
+                    `<p style="margin-bottom:0;max-width:62ch;color:#e0f2fe">Hệ thống luôn sẵn sàng lắng nghe mọi góp ý từ sinh viên và giảng viên để hoàn thiện mô phỏng chính xác và trực quan hơn.</p>` +
+                    `</div>` +
+                    `</div>` +
+
+                    `<div class="contact-grid">` +
+                    `<div style="display:flex;flex-direction:column;gap:18px">` +
+                    `<div class="card">` +
+                    `<h3 style="margin-top:0;display:flex;align-items:center;gap:8px">${svg('globe', 20)} Thông tin dự án</h3>` +
+                    `<p class="mu" style="font-size:13.5px;line-height:1.65;margin:0">` +
+                    `<b>Đề tài:</b> CPU Scheduling Simulator (Mô phỏng lập lịch CPU).<br>` +
+                    `<b>Môn học:</b> Hệ điều hành (Operating Systems).<br>` +
+                    `<b>Mục tiêu:</b> Phục vụ trực quan hóa bài giảng và hỗ trợ làm đồ án môn học.<br>` +
+                    `<b>Nền tảng:</b> Thuần Web (HTML5/CSS3/JavaScript), không cần cài đặt thêm phần mềm.` +
+                    `</p>` +
+                    `</div>` +
+
+                    `<div class="card">` +
+                    `<h3 style="margin-top:0;display:flex;align-items:center;gap:8px">${svg('check', 20)} Câu hỏi thường gặp (FAQ)</h3>` +
+                    `<div class="faq-list">` +
+                    `<div class="faq-item"><b>Hệ thống có hoạt động ngoại tuyến (Offline) không?</b><p class="mu">Có. Ứng dụng chạy 100% trong trình duyệt của bạn (Client-side), hoàn toàn không cần kết nối mạng hay máy chủ.</p></div>` +
+                    `<div class="faq-item"><b>Dữ liệu tiến trình có bị lộ ra ngoài không?</b><p class="mu">Không. Toàn bộ tiến trình chỉ lưu trong bộ nhớ tạm phiên làm việc hiện tại, đảm bảo an toàn tuyệt đối.</p></div>` +
+                    `<div class="faq-item"><b>Làm sao để so sánh đối chiếu 7 thuật toán?</b><p class="mu">Tại trang <b>Kết quả</b> hoặc <b>Phân tích tải CPU</b>, hệ thống tự động tổng hợp bảng so sánh và đánh dấu xanh giá trị tối ưu nhất.</p></div>` +
+                    `</div>` +
+                    `</div>` +
+
+                    `<div class="card" style="background:var(--okbg);border-color:var(--ok)">` +
+                    `<h4 style="margin:0 0 6px;color:var(--ok);font-size:14.5px">Hỗ trợ giảng dạy trên lớp</h4>` +
+                    `<p class="mu" style="margin:0;font-size:13px;color:var(--tx)">Giảng viên và sinh viên có thể trình chiếu trực tiếp trên máy chiếu để minh họa diễn biến hàng đợi, sự kiện ngắt và chuyển ngữ cảnh trong giờ học.</p>` +
+                    `</div>` +
+                    `</div>` +
+
+                    `<div>` +
+                    `<div class="card">` +
+                    `<h3 style="margin-top:0;display:flex;align-items:center;gap:8px">${svg('note', 20)} Gửi thư đóng góp ý kiến</h3>` +
+                    `<p class="mu" style="font-size:13.5px;margin-bottom:18px">Điền thông tin bên dưới nếu bạn muốn đề xuất tính năng mới, báo cáo vấn đề hoặc gửi câu hỏi về thuật toán.</p>` +
+                    `<form class="fm" style="max-width:none" onsubmit="return handleContactSubmit(event)">` +
+                    `<div class="form-row">` +
+                    `<label><span>Họ và tên <b style="color:var(--er)">*</b></span><input id="cf-name" placeholder="Nguyễn Văn A" required></label>` +
+                    `<label><span>Email liên hệ <b style="color:var(--er)">*</b></span><input id="cf-email" type="email" placeholder="student@university.edu.vn" required></label>` +
+                    `</div>` +
+                    `<div class="form-row">` +
+                    `<label><span>Chủ đề</span><select id="cf-topic"><option>Góp ý cải tiến giao diện</option><option>Báo lỗi thuật toán lập lịch</option><option>Đề xuất thêm tính năng mới</option><option>Câu hỏi học tập môn Hệ điều hành</option><option>Khác</option></select></label>` +
+                    `<label><span>Thuật toán quan tâm</span><select id="cf-algo"><option>Tất cả các thuật toán</option><option>FCFS</option><option>SJF / SRTF</option><option>Round Robin</option><option>Priority Scheduling</option><option>MLQ / MLFQ</option></select></label>` +
+                    `</div>` +
+                    `<label><span>Nội dung góp ý <b style="color:var(--er)">*</b></span><textarea id="cf-msg" rows="5" placeholder="Mô tả chi tiết câu hỏi, trường hợp cần kiểm tra hoặc ý tưởng cải tiến của bạn..." required></textarea></label>` +
+                    `<button class="bt" type="submit" style="margin-top:6px">${svg('arrow', 16, 2)} Gửi phản hồi ngay</button>` +
+                    `<div id="cf-alert" style="display:none;margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13.5px"></div>` +
+                    `</form>` +
+                    `</div>` +
+                    `</div>` +
+                    `</div></section>`;
+            }
+        };
+
+        function handleContactSubmit(e) {
+            e.preventDefault();
+            const alertEl = $('#cf-alert');
+            const name = $('#cf-name') ? $('#cf-name').value : 'bạn';
+            if (alertEl) {
+                alertEl.style.display = 'block';
+                alertEl.style.background = 'var(--okbg)';
+                alertEl.style.color = 'var(--ok)';
+                alertEl.style.border = '1px solid var(--ok)';
+                alertEl.innerHTML = `<strong>✓ Cảm ơn ${name}!</strong> Góp ý của bạn đã được ghi nhận vào phiên làm việc hiện tại.`;
+                setTimeout(() => {
+                    if ($('#cf-msg')) $('#cf-msg').value = '';
+                }, 1500);
+            }
+            return false;
+        }
+
+        /* =========================================================================
+           13. ĐIỀU HƯỚNG VÀ KHỞI TẠO
+        ========================================================================= */
+        const TABS = [
+            ['about', 'Giới thiệu'],
+            ['home', 'Trang chủ'],
+            ['vm', 'Máy tính ảo'],
+            ['alg', 'Thuật toán'],
+            ['load', 'Phân tích tải CPU'],
+            ['res', 'Kết quả'],
+            ['contact', 'Liên hệ']
+        ];
+
+        function go(v, preserveScroll) {
+            S.view = v;
+            const isVm = (v === 'vm');
+            $('#vm').hidden = !isVm;
+            $('#v').hidden = isVm;
+            if (!isVm) {
+                $('#v').innerHTML = V[v]();
+                simBtn();
+            } else {
+                tbl();
+            }
+            $('#nav').innerHTML = `<span class="lg">${svg('chip', 30, 1.7)}<b>CPU Scheduling Simulator</b></span>` +
+                TABS.map(t => `<button class="${t[0] == v ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
+            if (!preserveScroll) scrollTo(0, 0);
+        }
+
+        // Khởi tạo giao diện Desktop VM
+        $('#vm').innerHTML = `<section class="pg"><h1>Máy tính ảo</h1><p class="mu">Nhấp vào biểu tượng để mở ứng dụng; mỗi lần mở sẽ sinh một tiến trình mô phỏng tương ứng vào hệ thống. Bạn có thể kéo di chuyển cửa sổ bằng thanh tiêu đề.</p>` +
+            `<div class="dk" id="dk">${APPS.map((a, i) => `<button class="ic" onclick="openApp(${i})"><span class="tile">${ico(a[1], 26)}</span>${a[0]}</button>`).join('')}` +
+            `<div class="tk"><div class="st"><i></i><i></i><i></i><i></i></div><div class="se">${svg('search', 16)}<span>Tìm kiếm...</span></div><div id="tbi"></div><div class="cl" id="clk"></div></div></div>` +
+            `<h2>Danh sách tiến trình</h2>` +
+            `<form class="bar" onsubmit="return addP(event)">` +
+            `<input name="nm" placeholder="Tên tiến trình">` +
+            `<select name="ty"><option>CPU</option><option>IO</option><option selected>HH</option></select>` +
+            `<input name="at" type="number" min="0" placeholder="Arrival" style="width:84px">` +
+            `<input name="cpu" type="number" min="1" placeholder="CPU" style="width:70px">` +
+            `<input name="io" type="number" min="0" placeholder="I/O" style="width:70px">` +
+            `<input name="pr" type="number" min="0" placeholder="Priority" style="width:96px">` +
+            `<button class="bt">Thêm tiến trình</button>` +
+            `<button type="button" class="bt g" onclick="sample()">Nạp tập mẫu</button>` +
+            `<button type="button" class="bt g" onclick="S.procs=[];S.fin=false;tbl()">Xóa tất cả</button>` +
+            `</form>` +
+            `<div class="sc" id="pt"></div>` +
+            `<div class="bar"><button class="bt g" onclick="go('alg')">Chọn thuật toán</button><button class="bt" onclick="go('res')">Chạy mô phỏng</button></div>` +
+            `<p class="mu">Loại tiến trình: CPU = CPU-bound (thiên về tính toán), IO = I/O-bound (thiên về nhập xuất), HH = hỗn hợp.</p></section>`;
+
+        // Khởi động
+        clk();
+        setInterval(clk, 15000);
+        // Khởi động với 0 tiến trình ban đầu theo yêu cầu
+        go('home');
+    </script>
+</body>
+
+</html>

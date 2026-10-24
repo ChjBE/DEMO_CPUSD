@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>CPU Scheduling Simulator</title>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header class="nav" id="nav"></header>
+    <main>
+        <div id="v"></div>
+        <div id="vm" hidden></div>
+    </main>
+    <footer>
+        <div class="ft-wrap">
+            <span class="ft-copy">CPU Scheduling Simulator - Công cụ mô phỏng phục vụ học môn Hệ điều hành - 2026</span>
+            <div class="ft-links">
+                <a onclick="go('about')">Giới thiệu</a>
+                <a onclick="go('contact')">Liên hệ</a>
+                <a onclick="alert('Hệ thống không thu thập dữ liệu cá nhân; mọi dữ liệu nằm trong trình duyệt của bạn.')">Chính sách bảo mật</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Các Modules JavaScript được tổ chức logic -->
+    <script src="js/constants.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/algorithms.js"></script>
+    <script src="js/gantt.js"></script>
+    <script src="js/stateView.js"></script>
+    <script src="js/controller.js"></script>
+    <script src="js/desktop.js"></script>
+    <script src="js/loadAnalysis.js"></script>
+    <script src="js/views.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

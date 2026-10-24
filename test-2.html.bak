@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>CPU Scheduling Simulator</title>
+    <style>
+        :root {
+            --bg: #f4f7fc;
+            --sf: #fff;
+            --tx: #0f1e3d;
+            --mu: #5f6c85;
+            --ac: #2563eb;
+            --bt: #2563eb;
+            --bd: #e2e8f3;
+            --ac2: #eaf1ff;
+            --nv: rgba(255, 255, 255, .88);
+            --ok: #15803d;
+            --okbg: #e6f6ec;
+            --hi: #c2570c;
+            --er: #c42b1c;
+            --sh: 0 1px 2px rgba(15, 30, 61, .04), 0 4px 14px rgba(15, 30, 61, .04);
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            color-scheme: light
+        }
+
+        @media(prefers-color-scheme:dark) {
+            :root:not([data-theme=light]) {
+                --bg: #0b1220;
+                --sf: #131c2e;
+                --tx: #e6ecf8;
+                --mu: #94a3bf;
+                --ac: #6aa1ff;
+                --bd: #243049;
+                --ac2: #172a4d;
+                --nv: rgba(19, 28, 46, .88);
+                --ok: #4ade80;
+                --okbg: #12301f;
+                --hi: #fb923c;
+                --er: #f87171;
+                --sh: 0 1px 2px rgba(0, 0, 0, .3);
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme=dark] {
+            --bg: #0b1220;
+            --sf: #131c2e;
+            --tx: #e6ecf8;
+            --mu: #94a3bf;
+            --ac: #6aa1ff;
+            --bd: #243049;
+            --ac2: #172a4d;
+            --nv: rgba(19, 28, 46, .88);
+            --ok: #4ade80;
+            --okbg: #12301f;
+            --hi: #fb923c;
+            --er: #f87171;
+            --sh: 0 1px 2px rgba(0, 0, 0, .3);
+            color-scheme: dark
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        [hidden] {
+            display: none !important
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--tx);
+            font: 15px/1.6 Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased
+        }
+
+        /* ---------- Icon ---------- */
+        .i {
+            display: block;
+            flex: none
+        }
+
+        .bd {
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--ac2);
+            color: var(--ac);
+            margin: 0 auto 12px
+        }
+
+        .bd.g {
+            background: var(--okbg);
+            color: var(--ok)
+        }
+
+        /* ---------- Nav ---------- */
+        .nav {
+            position: sticky;
+            top: env(safe-area-inset-top, 0px);
+            z-index: 50;
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            height: 64px;
+            padding: 0 clamp(16px, 4vw, 48px);
+            background: var(--nv);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--bd);
+            overflow-x: auto;
+            scrollbar-width: none
+        }
+
+        .nav::-webkit-scrollbar {
+            display: none
+        }
+
+        .lg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 28px;
+            color: var(--ac);
+            white-space: nowrap
+        }
+
+        .nav b {
+            color: var(--tx);
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -.01em
+        }
+
+        .nav button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            height: 64px;
+            border: 0;
+            background: none;
+            color: var(--tx);
+            padding: 0 14px;
+            font: inherit;
+            font-size: 14.5px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: color .15s
+        }
+
+        .nav button:hover {
+            color: var(--ac)
+        }
+
+        .nav button.on {
+            color: var(--ac);
+            font-weight: 600
+        }
+
+        .nav button.on::after {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+            background: var(--ac)
+        }
+
+        /* ---------- Layout ---------- */
+        .pg {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 32px 20px 48px
+        }
+
+        h1 {
+            font-size: 30px;
+            margin: 0 0 8px;
+            letter-spacing: -.02em;
+            line-height: 1.2
+        }
+
+        h2 {
+            font-size: 18px;
+            margin: 32px 0 12px;
+            letter-spacing: -.01em
+        }
+
+        h3 {
+            margin: 0 0 8px;
+            font-size: 16px
+        }
+
+        .mu {
+            color: var(--mu)
+        }
+
+        .card {
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: var(--sh)
+        }
+
+        .card p {
+            margin: 0 0 10px
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px
+        }
+
+        .fc {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 24px 20px 22px
+        }
+
+        .fc h3 {
+            margin: 2px 0 6px;
+            font-size: 16px
+        }
+
+        .fc p {
+            flex: 1;
+            max-width: 22ch;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0 0 16px
+        }
+
+        /* ---------- Buttons & fields ---------- */
+        .bt,
+        button.bt {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--bt);
+            color: #fff;
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: filter .15s
+        }
+
+        .bt:hover {
+            filter: brightness(1.08)
+        }
+
+        .bt.g {
+            background: var(--ac2);
+            color: var(--ac)
+        }
+
+        .bt.sm {
+            padding: 6px 14px
+        }
+
+        .bt.x {
+            padding: 6px 8px
+        }
+
+        .bt:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid var(--ac);
+            outline-offset: 2px
+        }
+
+        input,
+        select,
+        textarea {
+            font: inherit;
+            background: var(--sf);
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            padding: 7px 10px;
+            max-width: 100%
+        }
+
+        table input {
+            width: 64px
+        }
+
+        .bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin: 14px 0
+        }
+
+        .sc {
+            overflow-x: auto
+        }
+
+        /* ---------- Table ---------- */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            overflow: hidden
+        }
+
+        th,
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--bd);
+            text-align: left;
+            white-space: nowrap
+        }
+
+        th {
+            background: var(--ac2);
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--tx)
+        }
+
+        tr:last-child td {
+            border-bottom: 0
+        }
+
+        td.bst {
+            color: var(--ok);
+            font-weight: 700
+        }
+
+        .tag {
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff
+        }
+
+        .tag.r {
+            background: #2563eb
+        }
+
+        .tag.t {
+            background: #64748b
+        }
+
+        /* ---------- KPI ---------- */
+        .kpi {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin: 16px 0
+        }
+
+        .kpi>div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 20px 14px;
+            color: var(--mu);
+            box-shadow: var(--sh)
+        }
+
+        .kpi b {
+            display: block;
+            font-size: 26px;
+            line-height: 1.2;
+            color: var(--tx);
+            margin-bottom: 2px;
+            letter-spacing: -.01em
+        }
+
+        .kpi b.ok {
+            color: var(--ok)
+        }
+
+        .kpi b.hi {
+            color: var(--hi)
+        }
+
+        .kpi b.over {
+            color: var(--er)
+        }
+
+        .ok {
+            color: var(--ok)
+        }
+
+        .hi {
+            color: var(--hi)
+        }
+
+        .over {
+            color: var(--er)
+        }
+
+        /* ---------- Hero ---------- */
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr);
+            align-items: center;
+            gap: 24px;
+            padding: 44px 48px;
+            border-radius: 18px;
+            color: #fff;
+            background: radial-gradient(60% 110% at 88% 70%, rgba(59, 110, 240, .55), transparent 70%), linear-gradient(135deg, #0d2a63, #1a4cc0);
+            margin-bottom: 20px
+        }
+
+        .ey {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            color: #8fb4ff;
+            margin-bottom: 8px
+        }
+
+        .hero h1 {
+            font-size: clamp(30px, 4vw, 44px);
+            white-space: nowrap
+            margin: 0 0 14px;
+            letter-spacing: -.025em
+        }
+
+        .hero p {
+            max-width: 52ch;
+            margin: 0 0 26px;
+            font-size: 16.5px;
+            line-height: 1.6;
+            color: #dbe6ff
+        }
+
+        .hero .hb {
+            background: #3b6ef0;
+            padding: 13px 24px;
+            font-size: 15.5px;
+            border-radius: 10px
+        }
+
+        .hv {
+            display: grid;
+            place-items: center
+        }
+
+        .hv svg {
+            width: 100%;
+            height: auto;
+            max-width: 480px
+        }
+
+        /* ---------- Virtual desktop ---------- */
+        .dk {
+            position: relative;
+            height: 520px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--bd);
+            background: radial-gradient(55% 70% at 70% 30%, rgba(96, 165, 250, .55), transparent 70%), radial-gradient(45% 60% at 20% 90%, rgba(37, 99, 235, .6), transparent 70%), linear-gradient(135deg, #0d2a63, #1d4ed8 65%, #3b82f6);
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 10px;
+            padding: 16px 16px 72px;
+            box-shadow: var(--sh)
+        }
+
+        .ic {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            width: 92px;
+            background: none;
+            border: 0;
+            color: #fff;
+            font: inherit;
+            font-size: 12.5px;
+            line-height: 1.25;
+            text-align: center;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+            cursor: pointer;
+            border-radius: 10px;
+            padding: 8px 4px
+        }
+
+        .ic:hover {
+            background: rgba(255, 255, 255, .16)
+        }
+
+        .ic:active {
+            background: rgba(255, 255, 255, .26)
+        }
+
+        .ic .tile {
+            display: grid;
+            place-items: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, .18);
+            border: 1px solid rgba(255, 255, 255, .28);
+            backdrop-filter: blur(6px);
+            color: #fff;
+            text-shadow: none
+        }
+
+        .tk {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 52px;
+            background: rgba(244, 247, 252, .86);
+            backdrop-filter: blur(18px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 0 14px;
+            color: #0f1e3d;
+            border-top: 1px solid rgba(255, 255, 255, .6);
+            z-index: 9999
+        }
+
+        .st {
+            display: grid;
+            grid-template-columns: 9px 9px;
+            gap: 2px;
+            margin: 0 4px 0 0
+        }
+
+        .st i {
+            width: 9px;
+            height: 9px;
+            background: #2563eb;
+            display: block;
+            border-radius: 1px
+        }
+
+        .se {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, .8);
+            border: 1px solid rgba(15, 30, 61, .12);
+            border-radius: 999px;
+            padding: 5px 16px;
+            font-size: 13px;
+            min-width: 160px;
+            color: #5f6c85
+        }
+
+        #tbi {
+            display: flex;
+            gap: 6px
+        }
+
+        #tbi span {
+            position: relative;
+            display: grid;
+            place-items: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, .7);
+            color: #2563eb
+        }
+
+        #tbi span::after {
+            content: "";
+            position: absolute;
+            bottom: 2px;
+            width: 12px;
+            height: 3px;
+            border-radius: 3px;
+            background: #2563eb
+        }
+
+        .cl {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            text-align: right;
+            line-height: 1.3
+        }
+
+        .win {
+            position: absolute;
+            width: 300px;
+            max-width: 80%;
+            background: var(--sf);
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            box-shadow: 0 16px 40px rgba(5, 15, 45, .35)
+        }
+
+        .wh {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px 6px 14px;
+            cursor: move;
+            background: var(--ac2);
+            border-radius: 12px 12px 0 0;
+            touch-action: none;
+            font-size: 13.5px;
+            font-weight: 600
+        }
+
+        .wt {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--ac)
+        }
+
+        .wt::after {
+            content: attr(data-t);
+            color: var(--tx)
+        }
+
+        .wh button {
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border: 0;
+            background: none;
+            color: var(--tx);
+            cursor: pointer;
+            border-radius: 6px
+        }
+
+        .wh button:hover {
+            background: #e81123;
+            color: #fff
+        }
+
+        .wb {
+            padding: 12px 14px 14px;
+            font-size: 13.5px
+        }
+
+        .wb p {
+            margin: 0 0 10px
+        }
+
+        .wb textarea {
+            width: 100%;
+            height: 70px
+        }
+
+        /* ---------- Gantt ---------- */
+        input[type=range] {
+            width: min(320px, 60%);
+            padding: 0;
+            vertical-align: middle;
+            accent-color: var(--ac)
+        }
+
+        input[type=checkbox] {
+            accent-color: var(--ac)
+        }
+
+        .gt {
+            margin-right: 20px;
+            display: flex;
+            gap: 2px;
+            height: 46px;
+            overflow: visible;
+            margin-bottom: 28px
+        }
+
+        .sg {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 600;
+            border-radius: 6px;
+            min-width: 0
+        }
+
+        .sg small {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            transform: translateX(-50%);
+            color: var(--mu);
+            font-size: 11px;
+            font-weight: 400
+        }
+
+        .sg:first-child small {
+            transform: none
+        }
+
+        .sg small.en {
+            left: auto;
+            right: 0;
+            transform: translateX(50%)
+        }
+
+        .lgd {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 14px;
+            margin-top: 4px;
+            font-size: 12.5px;
+            color: var(--mu)
+        }
+
+        .lgd span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .lgd i {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: block
+        }
+
+        .bt:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            filter: none
+        }
+
+        .sg.gh {
+            background: transparent;
+            border: 1px dashed var(--bd);
+            color: var(--mu)
+        }
+
+        .ctl .cb {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center
+        }
+
+        .ctl .cb label {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--mu);
+            font-size: 13.5px
+        }
+
+        .ctl .tl {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 14px
+        }
+
+        .ctl .tl input[type=range] {
+            flex: 1;
+            width: auto
+        }
+
+        .ctl .tl span {
+            white-space: nowrap;
+            color: var(--mu)
+        }
+
+        .ctl .tl b {
+            color: var(--tx)
+        }
+
+        .ss {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0 0;
+            font-size: 13.5px;
+            color: var(--mu)
+        }
+
+        .ss i {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--mu);
+            flex: none
+        }
+
+        .ss.on i {
+            background: var(--ok)
+        }
+
+        .sim {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+            margin-top: 16px
+        }
+
+        .sim .card h3 {
+            margin: 0 0 2px
+        }
+
+        .sim .card>p.mu {
+            margin: 0 0 16px;
+            font-size: 13px
+        }
+
+        .sd {
+            width: 100%;
+            height: auto;
+            display: block
+        }
+
+        .sd .nd {
+            fill: var(--sf);
+            stroke: var(--bd);
+            stroke-width: 1.2
+        }
+
+        .sd .nd.dash {
+            stroke-dasharray: 4 4
+        }
+
+        .sd text {
+            fill: var(--tx);
+            font-size: 10.5px;
+            font-weight: 600
+        }
+
+        .sd text.sub {
+            fill: var(--mu);
+            font-size: 10.5px;
+            font-weight: 400
+        }
+
+        .sd text.cn {
+            fill: var(--mu);
+            font-size: 11px;
+            font-weight: 700;
+            text-anchor: end
+        }
+
+        .sd text.cp {
+            fill: #fff;
+            font-size: 10.5px;
+            font-weight: 600;
+            text-anchor: middle
+        }
+
+        .sd .ar {
+            fill: none;
+            stroke: var(--mu);
+            stroke-width: 1.4;
+            opacity: .7
+        }
+
+        .sd .ar.dash {
+            stroke-dasharray: 3 3;
+            opacity: .45
+        }
+
+        .sd .ar.on {
+            stroke: var(--ac);
+            stroke-width: 2.6;
+            opacity: 1
+        }
+
+        .sd .mh {
+            fill: var(--mu)
+        }
+
+        .sd .mo {
+            fill: var(--ac)
+        }
+
+        .evl {
+            list-style: none;
+            margin: 14px 0 0;
+            padding: 12px 0 0;
+            border-top: 1px solid var(--bd);
+            display: grid;
+            gap: 6px;
+            font-size: 13px
+        }
+
+        .evl li {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .evl .tm {
+            min-width: 42px;
+            color: var(--mu);
+            font-variant-numeric: tabular-nums
+        }
+
+        .evl .pc {
+            display: inline-grid;
+            place-items: center;
+            min-width: 34px;
+            padding: 1px 8px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600
+        }
+
+        .evl .st2 {
+            font-weight: 600
+        }
+
+        .evl .mu {
+            margin: 0
+        }
+
+        .note {
+            margin: 10px 0 0;
+            font-size: 12.5px
+        }
+
+        @media(max-width:900px) {
+            .sim {
+                grid-template-columns: 1fr
+            }
+
+            .ctl .cb label {
+                margin-left: 0
+            }
+        }
+
+        .fm {
+            display: grid;
+            gap: 12px;
+            max-width: 520px
+        }
+
+        .fm label {
+            display: grid;
+            gap: 4px
+        }
+
+        /* ---------- Footer ---------- */
+        footer {
+            border-top: 1px solid var(--bd);
+            padding: 22px 16px 26px;
+            text-align: center;
+            color: var(--mu);
+            font-size: 13px;
+            line-height: 2
+        }
+
+        footer a {
+            color: var(--ac);
+            cursor: pointer;
+            margin: 0 10px
+        }
+
+        footer a:hover {
+            text-decoration: underline
+        }
+
+        @media(max-width:760px) {
+            .hero {
+                grid-template-columns: 1fr;
+                padding: 32px 24px
+            }
+
+            .hv {
+                display: none
+            }
+
+            .hero h1 {
+                white-space: normal
+            }
+        }
+
+        @media(max-width:600px) {
+            .dk {
+                height: 460px
+            }
+
+            .se {
+                min-width: 0;
+                padding: 5px 12px
+            }
+
+            .se span {
+                display: none
+            }
+
+            .cl {
+                display: none
+            }
+        }
+
+        @media(prefers-reduced-motion:reduce) {
+            * {
+                transition: none !important
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="nav" id="nav"></header>
+    <main>
+        <div id="v"></div>
+        <div id="vm" hidden></div>
+    </main>
+    <footer>CPU Scheduling Simulator - Công cụ mô phỏng phục vụ học môn Hệ điều hành - 2026<br><a onclick="go('about')">Giới thiệu</a><a onclick="go('contact')">Liên hệ</a><a onclick="alert('Hệ thống không thu thập dữ liệu cá nhân; mọi dữ liệu nằm trong trình duyệt của bạn.')">Chính sách bảo mật</a></footer>
+    <script>
+        const $ = s => document.querySelector(s);
+        const IC = {
+            chip: '<rect x="6" y="6" width="12" height="12" rx="2.5"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>',
+            list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8"/><circle cx="3.5" cy="12" r=".8"/><circle cx="3.5" cy="18" r=".8"/>',
+            clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+            check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+            nodes: '<circle cx="12" cy="5.5" r="2.5"/><circle cx="5.5" cy="18" r="2.5"/><circle cx="18.5" cy="18" r="2.5"/><path d="M10.8 7.8L6.8 15.7M13.2 7.8l4 7.9"/>',
+            monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+            bars: '<path d="M5 20V13M12 20V4M19 20V9"/>',
+            gauge: '<path d="M4.5 18a9 9 0 1 1 15 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1"/>',
+            chart: '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M7 15l3.5-3.5 2.5 2.5 4-5"/>',
+            search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+            folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+            globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/>',
+            calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/>',
+            play: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.5 9.5v5l4-2.5z"/>',
+            note: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+            gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
+            arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+            x: '<path d="M6 6l12 12M18 6L6 18"/>',
+            run: '<path d="M8 5.5l11 6.5-11 6.5z"/>',
+            pause: '<path d="M9 5v14M15 5v14"/>',
+            step: '<path d="M5 5.5l9 6.5-9 6.5zM19 5v14"/>',
+            reset: '<path d="M4 12a8 8 0 1 0 2.6-5.9M4 4.5V9h4.5"/>'
+        };
+        const svg = (n, s = 22, w = 1.8) => `<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+        const EM = { '🖥️': 'monitor', '📁': 'folder', '🌐': 'globe', '🧮': 'calc', '▶️': 'play', '📝': 'note', '⚙️': 'gear' };
+        const ico = (e, s = 20) => svg(EM[e] || 'chip', s);
+        const HERO_SVG = `<svg viewBox="0 0 520 240" fill="none" aria-hidden="true"><g stroke="#cfe0ff" stroke-width="3" stroke-linecap="round"><path d="M70 22v22M100 22v22M130 22v22M160 22v22M70 196v22M100 196v22M130 196v22M160 196v22M22 70h22M22 100h22M22 130h22M22 160h22M186 70h22M186 100h22M186 130h22M186 160h22"/></g><rect x="44" y="44" width="142" height="152" rx="18" fill="rgba(255,255,255,.08)" stroke="#8fb4ff" stroke-width="3"/><rect x="66" y="68" width="98" height="104" rx="10" fill="rgba(255,255,255,.06)" stroke="#fff" stroke-width="3"/><text x="115" y="130" text-anchor="middle" font-family="Inter,Segoe UI,sans-serif" font-size="30" font-weight="700" fill="#fff">CPU</text><rect x="236" y="30" width="268" height="180" rx="12" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/><g stroke="rgba(255,255,255,.18)"><path d="M270 44v152M320 44v152M370 44v152M420 44v152M470 44v152"/></g><rect x="262" y="56" width="62" height="16" rx="3" fill="#5b8cff"/><rect x="298" y="86" width="74" height="16" rx="3" fill="#8fb4ff"/><rect x="352" y="116" width="74" height="16" rx="3" fill="#6f9bff"/><rect x="408" y="146" width="54" height="16" rx="3" fill="#8fb4ff"/><rect x="446" y="176" width="42" height="16" rx="3" fill="#bcd2ff"/></svg>`;
+
+        const NM = { FCFS: 'FCFS', SJF: 'SJF', SRTF: 'SRTF', PRIO: 'Priority', RR: 'Round Robin', MLQ: 'Multilevel Queue', MLFQ: 'Multilevel Feedback Queue' };
+        const AL = [
+            ['FCFS', 'Tiến trình đến trước được cấp CPU trước, chạy đến khi xong (không ngắt). Phù hợp khi các tác vụ có độ dài tương đương.', 'Đơn giản, công bằng theo thứ tự đến.', 'Hiệu ứng đoàn xe: tiến trình dài làm tiến trình ngắn chờ lâu.'],
+            ['SJF', 'Chọn tiến trình sẵn sàng có CPU Burst ngắn nhất, không ngắt. Cần biết trước thời gian xử lý.', 'Giảm thời gian chờ trung bình.', 'Tiến trình dài có thể bị bỏ đói; phải ước lượng burst.'],
+            ['SRTF', 'Phiên bản có ngắt của SJF: luôn chạy tiến trình còn lại ít nhất, tiến trình mới ngắn hơn sẽ giành CPU.', 'Thời gian chờ trung bình thấp nhất trong nhóm dựa trên burst.', 'Đổi ngữ cảnh nhiều; tiến trình dài dễ bị bỏ đói.'],
+            ['PRIO', 'Chọn tiến trình có mức ưu tiên cao nhất (số nhỏ = ưu tiên cao). Có thể bật chế độ ngắt; cùng ưu tiên xếp theo thứ tự đến.', 'Phục vụ tác vụ quan trọng trước.', 'Nguy cơ starvation với tiến trình ưu tiên thấp.'],
+            ['RR', 'Mỗi tiến trình dùng CPU tối đa một Time Quantum rồi quay lại cuối hàng đợi.', 'Công bằng, phản hồi tốt cho tác vụ tương tác.', 'Quantum quá nhỏ gây đổi ngữ cảnh nhiều; quá lớn thành FCFS.'],
+            ['MLQ', 'Hai hàng đợi cố định theo loại tiến trình: hàng 0 (tương tác, Round Robin) ưu tiên hơn hàng 1 (CPU-bound, FCFS).', 'Chính sách riêng cho từng nhóm.', 'Tiến trình không đổi hàng; nhóm thấp có thể bị bỏ đói.'],
+            ['MLFQ', 'Ba hàng đợi: Quantum q, 2q rồi FCFS. Tiến trình mới vào hàng cao nhất, dùng hết quantum thì bị đẩy xuống.', 'Ưu tiên tác vụ ngắn mà không cần biết trước burst.', 'Nhiều tham số; tiến trình dài ở hàng thấp có thể chờ lâu.']];
+        const LIM = { FCFS: 'Hiệu ứng đoàn xe', SJF: 'Cần biết trước burst; có thể bỏ đói tiến trình dài', SRTF: 'Đổi ngữ cảnh nhiều; có thể bỏ đói tiến trình dài', PRIO: 'Nguy cơ starvation', RR: 'Phụ thuộc Quantum, đổi ngữ cảnh nhiều', MLQ: 'Nhóm cố định, hàng thấp có thể bị bỏ đói', MLFQ: 'Nhiều tham số cần cấu hình' };
+        const APPS = [['This PC', '🖥️', 'HH', 2, 0, 3, 'Xem ổ đĩa và thiết bị.'], ['Thư mục', '📁', 'IO', 2, 3, 3, 'Mở, đọc và ghi tệp (nhiều chờ I/O).'], ['Trình duyệt', '🌐', 'IO', 4, 3, 3, 'Tải trang và tương tác (CPU xen I/O).'], ['Máy tính', '🧮', 'HH', 2, 0, 2, 'Phép tính với CPU Burst xác định.'], ['Video', '▶️', 'IO', 5, 6, 3, 'Phát video: nhiều giai đoạn CPU xen chờ I/O.'], ['Notepad', '📝', 'IO', 1, 1, 1, 'Soạn văn bản, tác vụ tương tác nhẹ.'], ['Chạy chương trình', '⚙️', 'CPU', 10, 0, 4, 'Chương trình tính toán nặng (CPU-bound).']];
+        const SC = [['burst', 'Nhiều tiến trình đến cùng lúc'], ['cpu', 'Tải CPU cao'], ['mixed', 'Tải hỗn hợp'], ['inter', 'Tác vụ tương tác'], ['hiprio', 'Tải ưu tiên cao'], ['starve', 'Starvation']];
+        const HINT = { burst: 'SJF/SRTF nếu biết burst; Round Robin để chia đều.', cpu: 'FCFS ít đổi ngữ cảnh; SJF nếu cần giảm chờ.', mixed: 'MLFQ hoặc MLQ để tách tác vụ ngắn và dài.', inter: 'Round Robin hoặc MLFQ để giữ phản hồi nhanh.', hiprio: 'Priority, kèm theo dõi nguy cơ starvation.', starve: 'MLFQ hoặc Round Robin để tránh bỏ đói.' };
+        const COL = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5', '#0891b2', '#ea580c'];
+        const S = { view: 'home', procs: [], pid: 1, t0: Date.now(), algo: 'RR', q: 3, pp: true, fin: false, z: 5, wn: 0, sc: 'starve', n: 12, load: null, r: null };
+
+        function sim(P0, a, q, pp) {
+            const mn = Math.min(...P0.map(p => p.at)), P = P0.map(p => ({ ...p, at: p.at - mn })), n = P.length, rem = P.map(p => p.cpu),
+                lvl = P.map(p => a == 'MLQ' ? (p.type == 'CPU' ? 1 : 0) : 0), ct = [], fs = [], g = [], rd = [];
+            let t = 0, cur = -1, used = 0, last = -1, cs = 0, busy = 0, done = 0, mq = 0;
+            const pre = a == 'SRTF' || a == 'MLQ' || a == 'MLFQ' || (a == 'PRIO' && pp),
+                Q = i => a == 'RR' ? q : a == 'MLQ' ? (lvl[i] ? 1e9 : q) : a == 'MLFQ' ? [q, 2 * q, 1e9][lvl[i]] : 1e9,
+                K = i => a == 'SJF' ? P[i].cpu : a == 'SRTF' ? rem[i] : a == 'PRIO' ? P[i].pr : (a == 'MLQ' || a == 'MLFQ') ? lvl[i] : 0;
+            while (done < n && t < 9999) {
+                P.forEach((p, i) => { if (p.at == t) rd.push(i) });
+                if (cur >= 0 && used >= Q(cur)) { if (a == 'MLFQ') lvl[cur] = Math.min(2, lvl[cur] + 1); rd.splice(rd.indexOf(cur), 1); rd.push(cur); cur = -1 }
+                let b = -1; rd.forEach(i => { if (b < 0 || K(i) < K(b)) b = i });
+                if (cur >= 0 && pre && K(b) < K(cur)) { rd.splice(rd.indexOf(cur), 1); rd.push(cur); cur = -1 }
+                if (cur < 0 && b >= 0) { cur = b; used = 0 }
+                mq = Math.max(mq, rd.length - (cur >= 0 ? 1 : 0));
+                const s = g[g.length - 1]; s && s.i == cur && s.e == t ? s.e++ : g.push({ i: cur, s: t, e: t + 1 });
+                if (cur >= 0) {
+                    if (last >= 0 && last != cur) cs++; if (fs[cur] == null) fs[cur] = t; rem[cur]--; used++; busy++; last = cur;
+                    if (!rem[cur]) { ct[cur] = t + 1; done++; rd.splice(rd.indexOf(cur), 1); cur = -1 }
+                }
+                t++
+            }
+            const m = P.map((p, i) => ({ ...p, ct: ct[i], tat: ct[i] - p.at, wt: ct[i] - p.at - p.cpu, rt: fs[i] - p.at })), av = k => m.reduce((s, x) => s + x[k], 0) / n;
+            return { g, m, P, T: t, wt: av('wt'), tat: av('tat'), rt: av('rt'), thr: n / t, u: busy / t * 100, cs, mq, mw: Math.max(...m.map(x => x.wt)) }
+        }
+
+        function gantt(r, upto) {
+            upto = upto == null ? r.T : upto;
+            return `<div class="sc"><div class="gt" style="min-width:${Math.min(Math.max(r.T * 22, 300), 2600)}px">` + r.g.filter(s => s.s < upto).map((s, k, ar) => { const e = Math.min(s.e, upto); return `<div class="sg" style="flex:${e - s.s};background:${s.i < 0 ? 'var(--bd)' : COL[r.P[s.i].pid % 10]}" title="${s.i < 0 ? 'Rảnh' : 'P' + r.P[s.i].pid}: ${s.s}–${e}">${s.i < 0 ? '' : 'P' + r.P[s.i].pid}<small>${s.s}</small>${k == ar.length - 1 ? `<small class="en">${e}</small>` : ''}</div>` }).join('') + (upto < r.T ? `<div class="sg gh" style="flex:${r.T - upto}"></div>` : '') + `</div></div>` + `<div class="lgd">${[...new Set(r.g.filter(s => s.s < upto && s.i >= 0).map(s => s.i))].map(i => `<span><i style="background:${COL[r.P[i].pid % 10]}"></i>P${r.P[i].pid}</span>`).join('')}</div>`
+        }
+        /* ===== Điều khiển mô phỏng & sơ đồ trạng thái (chỉ đọc kết quả của sim()) ===== */
+        const STN = ['New', 'Ready', 'Running', 'Waiting/Blocked', 'Terminated'], STC = ['#7c8aa5', '#2563eb', '#16a34a', '#d97706', '#64748b'];
+        /* Trạng thái từng tiến trình tại thời điểm t (đã thực thi xong t đơn vị) – suy ra từ r.g, at, ct */
+        function stAt(r, t) {
+            const sl = t > 0 ? r.g.find(s => s.s <= t - 1 && t - 1 < s.e) : null, ru = sl ? sl.i : -1;
+            return r.m.map((p, i) => p.ct != null && p.ct <= t ? 4 : p.at > t ? 0 : i == ru ? 2 : 1)
+        }
+        /* Các lần chuyển trạng thái từ 0 đến t (đã sắp theo thời điểm xảy ra) */
+        function stEv(r, t) {
+            const ev = []; let pv = r.m.map(() => 0);
+            for (let k = 0; k <= t; k++) {
+                const cu = stAt(r, k);
+                cu.forEach((c, i) => {
+                    const b = pv[i]; if (b == c) return;
+                    const add = (f, g, tm, a) => ev.push({ k, i, f, g, tm, a });
+                    if (b == 0) add(0, 1, k, 'nr');
+                    else if (b == 1 && c == 2) add(1, 2, k - 1, 'dp');
+                    else if (b == 2 && c == 1) add(2, 1, k - 1, 'pe');
+                    else if (b == 2 && c == 4) add(2, 4, k, 'tm');
+                    else if (b == 1 && c == 4) { add(1, 2, k - 1, 'dp'); add(2, 4, k, 'tm') }
+                });
+                pv = cu
+            }
+            return ev.sort((x, y) => x.tm - y.tm)
+        }
+        function stateView(r, t) {
+            const st = stAt(r, t), ev = stEv(r, t), on = new Set(ev.filter(e => e.k == t).map(e => e.a)),
+                W = 103, G = 22, X = k => k * (W + G), by = k => st.map((c, i) => c == k ? i : -1).filter(i => i >= 0),
+                mx = Math.max(1, ...[0, 1, 2, 4].map(k => by(k).length)), H = 40 + Math.ceil(mx / 3) * 24 + 8, WY = H + 54, TH = WY + 56, WW = 190,
+                mid = (X(1) + W / 2 + X(2) + W / 2) / 2, c1 = X(1) + W / 2, c2 = X(2) + W / 2,
+                ar = (id, d, dash) => `<path class="ar${dash ? ' dash' : ''}${on.has(id) ? ' on' : ''}" d="${d}" marker-end="url(#${on.has(id) ? 'mo' : 'mh'})"/>`,
+                node = (k, x, y, w, h, dash) => {
+                    const l = by(k), c = STC[k], act = l.length > 0;
+                    return `<g><rect class="nd${dash ? ' dash' : ''}" x="${x}" y="${y}" width="${w}" height="${h}" rx="12" style="${act ? 'stroke:' + c : ''}"/>` + (act ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${c}" fill-opacity=".08"/>` : '') +
+                        `<circle cx="${x + 9}" cy="${y + 17}" r="3.5" fill="${c}"/><text x="${x + 17}" y="${y + 21}">${STN[k]}</text><text class="cn" x="${x + w - 7}" y="${y + 21}" style="${act ? 'fill:' + c : ''}">${l.length}</text>` +
+                        (k == 3 ? `<text class="sub" x="${x + 17}" y="${y + 40}">Chưa áp dụng (I/O chưa ảnh hưởng lịch)</text>` : '') +
+                        l.map((i, j) => { const px = x + 8 + (j % 3) * 29, py = y + 34 + Math.floor(j / 3) * 24; return `<g><title>P${r.m[i].pid} – ${r.m[i].name}: ${STN[k]}</title><rect x="${px}" y="${py}" width="26" height="20" rx="6" fill="${COL[r.m[i].pid % 10]}"/><text class="cp" x="${px + 13}" y="${py + 14.5}">P${r.m[i].pid}</text></g>` }).join('') + `</g>`
+                };
+            const log = ev.slice(-8).reverse();
+            return `<svg class="sd" viewBox="0 0 480 ${TH}" role="img" aria-label="Sơ đồ trạng thái tiến trình tại t = ${t}"><defs><marker id="mh" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mh" d="M1 1L9 5L1 9z"/></marker><marker id="mo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mo" d="M1 1L9 5L1 9z"/></marker></defs>` +
+                ar('nr', `M${X(0) + W + 1} 22H${X(1) - 3}`) + ar('dp', `M${X(1) + W + 1} 16H${X(2) - 3}`) + ar('pe', `M${X(2) - 1} 34H${X(1) + W + 3}`) + ar('tm', `M${X(2) + W + 1} 22H${X(3) - 3}`) +
+                ar('rw', `M${c2} ${H + 1}V${WY - 3}`, 1) + ar('wr', `M${c1} ${WY - 1}V${H + 3}`, 1) +
+                node(0, X(0), 0, W, H) + node(1, X(1), 0, W, H) + node(2, X(2), 0, W, H) + node(4, X(3), 0, W, H) + node(3, mid - WW / 2, WY, WW, 52, 1) + `</svg>` +
+                `<ul class="evl">${log.length ? log.map(e => `<li><span class="tm">t = ${e.tm}</span><span class="pc" style="background:${COL[r.m[e.i].pid % 10]}">P${r.m[e.i].pid}</span><span class="st2" style="color:${STC[e.f]}">${STN[e.f]}</span>${svg('arrow', 14, 2)}<span class="st2" style="color:${STC[e.g]}">${STN[e.g]}</span></li>`).join('') : '<li class="mu">Chưa có chuyển trạng thái.</li>'}</ul>` +
+                `<p class="mu note">Waiting/Blocked được giữ trong sơ đồ cho đủ mô hình 5 trạng thái; I/O Burst hiện chỉ để hiển thị và chưa ảnh hưởng lịch chạy nên không có tiến trình nào vào trạng thái này.</p>`
+        }
+        function simStat(r, t) {
+            if (t >= r.T) return ['Hoàn tất: mọi tiến trình đã Terminated.', 0];
+            if (t <= 0) return ['Sẵn sàng. Nhấn Chạy hoặc Bước kế để bắt đầu.', 0];
+            const sl = r.g.find(s => s.s <= t - 1 && t - 1 < s.e);
+            return sl && sl.i >= 0 ? [`CPU vừa xử lý P${r.P[sl.i].pid} trong [${t - 1}, ${t}).`, 1] : [`CPU rảnh trong [${t - 1}, ${t}).`, 0]
+        }
+        function simBtn() {
+            const r = S.r; if (!$('#bRun')) return;
+            $('#bRun').disabled = !!S.tm; $('#bStop').disabled = !S.tm; $('#bStep').disabled = !!S.tm || S.cur >= r.T
+        }
+        function simView(t) {
+            const r = S.r; t = Math.max(0, Math.min(r.T, t)); S.cur = t;
+            const o = $('#gg .sc'), sl = o ? o.scrollLeft : 0;
+            $('#gg').innerHTML = gantt(r, t); $('#sd').innerHTML = stateView(r, t);
+            $('#tv').textContent = t; $('#ts').value = t;
+            const [m, on] = simStat(r, t), e = $('#ss'); e.className = 'ss' + (on ? ' on' : ''); e.innerHTML = `<i></i>${m}`;
+            const n = $('#gg .sc'); if (n) { const x = (n.scrollWidth - 20) * t / r.T; n.scrollLeft = x > sl + n.clientWidth - 50 ? x - n.clientWidth + 80 : x < sl ? Math.max(0, x - 40) : sl }
+            simBtn()
+        }
+        function simStop() { if (S.tm) { clearInterval(S.tm); S.tm = null } simBtn() }
+        function simTick() {
+            if (!$('#gg') || S.view != 'res') return simStop();
+            simView(S.cur + 1); if (S.cur >= S.r.T) simStop()
+        }
+        function simRun() { if (S.tm) return; if (S.cur >= S.r.T) simView(0); S.tm = setInterval(simTick, +$('#spd').value); simBtn() }
+        function simStep() { simStop(); simView(S.cur + 1) }
+        function simReset() { simStop(); simView(0) }
+        function simSpd() { if (S.tm) { simStop(); simRun() } }
+        function simUI(r) {
+            const t = S.cur, [m, on] = simStat(r, t);
+            return `<div class="card ctl"><div class="cb"><button class="bt" id="bRun" onclick="simRun()">${svg('run', 16, 2)}Chạy</button><button class="bt g" id="bStop" onclick="simStop()" disabled>${svg('pause', 16, 2)}Dừng</button><button class="bt g" id="bStep" onclick="simStep()" disabled>${svg('step', 16, 2)}Bước kế</button><button class="bt g" onclick="simReset()">${svg('reset', 16, 2)}Đặt lại</button><label>Tốc độ <select id="spd" onchange="simSpd()"><option value="1200">Chậm</option><option value="700" selected>Vừa</option><option value="300">Nhanh</option></select></label></div>` +
+                `<div class="tl"><input id="ts" type="range" min="0" max="${r.T}" value="${t}" aria-label="Thời điểm mô phỏng" oninput="simStop();simView(+this.value)"><span>t = <b id="tv">${t}</b> / ${r.T}</span></div><p id="ss" class="ss${on ? ' on' : ''}"><i></i>${m}</p></div>` +
+                `<div class="sim"><div class="card"><h3>Biểu đồ Gantt</h3><p class="mu">CPU được cấp cho tiến trình nào theo thời gian.</p><div id="gg">${gantt(r, t)}</div></div><div class="card"><h3>Sơ đồ trạng thái tiến trình</h3><p class="mu">Trạng thái của từng tiến trình tại thời điểm đang xem.</p><div id="sd">${stateView(r, t)}</div></div></div>`
+        }
+        const cmp = P => AL.map(a => ({ id: a[0], r: sim(P, a[0], S.q, S.pp) }));
+        function cmpT(rows) {
+            const f = (k, b) => Math[b == 'max' ? 'max' : 'min'](...rows.map(x => x.r[k])),
+                c = (x, k, d, b) => `<td class="${x.r[k] == f(k, b) ? 'bst' : ''}">${x.r[k].toFixed(d)}`;
+            return `<div class="sc"><table><tr><th>Thuật toán<th>TB chờ<th>TB quay vòng<th>TB phản hồi<th>Throughput<th>CPU %<th>Đổi ngữ cảnh<th>Chờ tối đa</tr>` + rows.map(x => `<tr><td><b>${NM[x.id]}</b>${c(x, 'wt', 2)}${c(x, 'tat', 2)}${c(x, 'rt', 2)}${c(x, 'thr', 3, 'max')}${c(x, 'u', 1, 'max')}${c(x, 'cs', 0)}${c(x, 'mw', 0)}`).join('') + `</table></div><p class="mu">Ô màu xanh đậm là giá trị tốt nhất theo từng chỉ số.</p>`
+        }
+        const ctrl = (pg) => `<select aria-label="Thuật toán" onchange="S.algo=this.value;go('${pg}',1)">${AL.map(a => `<option value="${a[0]}" ${a[0] == S.algo ? 'selected' : ''}>${NM[a[0]]}`).join('')}</select> Time Quantum <input type="number" min="1" value="${S.q}" onchange="S.q=Math.max(1,+this.value||1);go('${pg}',1)"> <label><input type="checkbox" ${S.pp ? 'checked' : ''} onchange="S.pp=this.checked;go('${pg}',1)"> Priority có ngắt</label>`;
+
+        const ni = (p, k) => `<input type="number" min="${k == 'cpu' ? 1 : 0}" value="${p[k]}" onchange="U(${p.pid},'${k}',this.value)">`;
+        const U = (id, k, v) => { S.procs.find(p => p.pid == id)[k] = Math.max(k == 'cpu' ? 1 : 0, +v || 0); S.fin = false; tbl() };
+        const del = id => { S.procs = S.procs.filter(p => p.pid != id); tbl() };
+        function tbl() { if (!$('#pt')) return; $('#pt').innerHTML = `<table><tr><th>PID<th>Tên tiến trình<th>Loại<th>Arrival<th>CPU Burst<th>I/O Burst<th>Priority<th>Trạng thái<th></tr>` + (S.procs.length ? S.procs.map(p => `<tr><td>P${p.pid}<td>${p.name}<td>${p.type}<td>${ni(p, 'at')}<td>${ni(p, 'cpu')}<td>${ni(p, 'io')}<td>${ni(p, 'pr')}<td><span class="tag ${S.fin ? 't' : 'r'}">${S.fin ? 'Terminated' : 'Ready'}</span><td><button class="bt g x" onclick="del(${p.pid})" aria-label="Xóa">${svg('x', 16)}</button>`).join('') : `<tr><td colspan="9" class="mu">Chưa có tiến trình. Mở một ứng dụng trên desktop hoặc nhấn “Nạp tập mẫu”.`) + `</table>` }
+        function sample() { [[0, 5, 2], [1, 3, 1], [2, 8, 4], [3, 2, 3], [4, 4, 2]].forEach(([a, c, p]) => S.procs.push({ pid: S.pid++, name: 'Mẫu ' + S.pid, type: 'HH', at: a, cpu: c, io: 0, pr: p })); S.fin = false; tbl() }
+        function addP(e) { e.preventDefault(); const f = e.target.elements; S.procs.push({ pid: S.pid++, name: f.nm.value || 'Tiến trình ' + S.pid, type: f.ty.value, at: +f.at.value || 0, cpu: Math.max(1, +f.cpu.value || 1), io: +f.io.value || 0, pr: +f.pr.value || 0 }); S.fin = false; tbl(); return false }
+        function spawn(i) { const a = APPS[i], j = Math.floor(Math.random() * 3) - 1, p = { pid: S.pid++, name: a[0], type: a[2], at: Math.floor((Date.now() - S.t0) / 3000), cpu: Math.max(1, a[3] + j), io: a[4], pr: a[5] }; S.procs.push(p); S.fin = false; tbl(); return p }
+        function tb() { $('#tbi').innerHTML = [...document.querySelectorAll('.win')].map(w => `<span>${ico(w.dataset.ic, 20)}</span>`).join('') }
+        function openApp(i) {
+            const a = APPS[i], p = spawn(i), w = document.createElement('div'), k = S.wn++ % 6;
+            w.className = 'win'; w.dataset.ic = a[1]; w.style.left = (230 + k * 28) + 'px'; w.style.top = (20 + k * 26) + 'px'; w.style.zIndex = ++S.z;
+            w.innerHTML = `<div class="wh"><span class="wt" data-t="${a[0]}">${ico(a[1], 18)}</span><button aria-label="Đóng">${svg('x', 14)}</button></div><div class="wb"><p>${a[6]}</p>${i == 5 ? '<textarea placeholder="Nhập văn bản..."></textarea>' : ''}<p class="mu">Đã tạo tiến trình <b>P${p.pid}</b>: CPU Burst ${p.cpu}, I/O Burst ${p.io}, Priority ${p.pr}.</p><button class="bt">Tạo thêm tiến trình</button></div>`;
+            const h = w.querySelector('.wh');
+            h.onpointerdown = e => {
+                if (e.target.tagName == 'BUTTON') return; w.style.zIndex = ++S.z; const dx = e.clientX - w.offsetLeft, dy = e.clientY - w.offsetTop; h.setPointerCapture(e.pointerId);
+                h.onpointermove = e => { w.style.left = Math.max(0, e.clientX - dx) + 'px'; w.style.top = Math.max(0, e.clientY - dy) + 'px' }; h.onpointerup = () => { h.onpointermove = null }
+            };
+            w.onpointerdown = () => { w.style.zIndex = ++S.z };
+            h.querySelector('button').onclick = () => { w.remove(); tb() };
+            w.querySelector('.bt').onclick = () => { const q = spawn(i); w.querySelector('.mu').innerHTML += ` Thêm <b>P${q.pid}</b>.` };
+            $('#dk').appendChild(w); tb()
+        }
+        function clk() { const d = new Date(); $('#clk').innerHTML = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + '<br>' + d.toLocaleDateString('vi-VN') }
+
+        const V = {
+            home() {
+                const n = S.procs.length, kp = (ic, v, l, g) => `<div><span class="bd ${g ? 'g' : ''}">${svg(ic, 24)}</span><b>${v}</b>${l}</div>`, fc = c => `<div class="card fc"><span class="bd">${svg(c[0], 24)}</span><h3>${c[1]}</h3><p class="mu">${c[2]}</p><button class="bt g sm" onclick="go('${c[3]}')">Mở</button></div>`; return `<section class="pg"><div class="hero"><div class="hc"><span class="ey">CPU SCHEDULING SIMULATOR</span><h1>Mô phỏng lập lịch CPU</h1><p>Tạo các tiến trình, chọn thuật toán và quan sát cách CPU được phân bổ qua biểu đồ Gantt và các chỉ số hiệu suất.</p><button class="bt hb" onclick="go('vm')">Vào máy tính ảo ${svg('arrow', 18, 2)}</button></div><div class="hv">${HERO_SVG}</div></div>
+<div class="kpi">${kp('list', n, 'Tiến trình đã tạo')}${kp('clock', S.fin ? 0 : n, 'Đang chờ')}${kp('check', S.fin ? n : 0, 'Đã hoàn thành', 1)}${kp('nodes', NM[S.algo], 'Thuật toán đang chọn')}</div>
+<div class="grid">${[['monitor', 'Máy tính ảo', 'Mô phỏng ứng dụng, sinh tiến trình mô phỏng.', 'vm'], ['bars', 'Thuật toán', 'Nguyên lý, ưu và nhược điểm của 7 thuật toán.', 'alg'], ['gauge', 'Phân tích tải CPU', 'Tạo kịch bản quá tải và nhận gợi ý thuật toán.', 'load'], ['chart', 'Kết quả', 'Gantt, chỉ số và so sánh các thuật toán.', 'res']].map(fc).join('')}</div></section>`
+            },
+            alg() { return `<section class="pg"><h1>Các thuật toán lập lịch</h1><p class="mu">Bấm “Chạy thuật toán này” để mô phỏng tập tiến trình hiện tại. Với Priority, số nhỏ nghĩa là ưu tiên cao.</p><div class="grid">` + AL.map(a => `<div class="card"><h3>${NM[a[0]]}</h3><p>${a[1]}</p><p><b class="ok">Ưu điểm:</b> ${a[2]}</p><p><b class="over">Hạn chế:</b> ${a[3]}</p><button class="bt" onclick="S.algo='${a[0]}';go('res')">Chạy thuật toán này</button></div>`).join('') + `</div></section>` },
+            res() {
+                if (!S.procs.length) return `<section class="pg"><h1>Kết quả</h1><p class="mu">Chưa có tiến trình để mô phỏng.</p><button class="bt" onclick="sample();go('res')">Nạp tập mẫu</button> <button class="bt g" onclick="go('vm')">Tạo trên máy tính ảo</button></section>`;
+                S.fin = true; simStop(); const r = S.r = sim(S.procs, S.algo, S.q, S.pp), f = (k, d = 2) => r[k].toFixed(d); S.cur = r.T;
+                return `<section class="pg"><h1>Kết quả mô phỏng: ${NM[S.algo]}</h1><div class="bar">${ctrl('res')}</div>
+<h2>Mô phỏng theo thời gian</h2>${simUI(r)}
+<div class="kpi"><div><b>${f('wt')}</b>TB thời gian chờ</div><div><b>${f('tat')}</b>TB quay vòng</div><div><b>${f('rt')}</b>TB phản hồi</div><div><b>${f('u', 1)}%</b>CPU mô phỏng</div><div><b>${f('thr', 3)}</b>Throughput</div><div><b>${r.cs}</b>Đổi ngữ cảnh</div></div>
+<h2>Chi tiết từng tiến trình</h2><div class="sc"><table><tr><th>PID<th>Tên<th>Arrival<th>CPU Burst<th>Priority<th>Completion<th>Turnaround<th>Waiting<th>Response</tr>`+ r.m.map(x => `<tr><td>P${x.pid}<td>${x.name}<td>${x.at}<td>${x.cpu}<td>${x.pr}<td>${x.ct}<td>${x.tat}<td>${x.wt}<td>${x.rt}`).join('') + `</table></div>
+<h2>So sánh 7 thuật toán trên cùng tập tiến trình</h2>${cmpT(cmp(S.procs))}</section>`
+            },
+            load() {
+                let h = `<section class="pg"><h1>Phân tích tải CPU</h1><p class="mu">Tạo một kịch bản tải, hệ thống chạy cùng tập tiến trình trên cả 7 thuật toán. Mức sử dụng CPU là số mô phỏng (thời gian CPU bận / tổng thời gian), không phải CPU thật của máy bạn.</p>
+<div class="bar"><select id="sc" aria-label="Kịch bản">${SC.map(s => `<option value="${s[0]}" ${s[0] == S.sc ? 'selected' : ''}>${s[1]}`).join('')}</select> Số tiến trình <input id="nn" type="number" min="5" max="40" value="${S.n}"> <button class="bt" onclick="mkLoad()">Tạo tải và mô phỏng</button></div>`;
+                const L = S.load; if (!L) return h + `<div class="card">Chưa có kịch bản. Chọn một kịch bản rồi nhấn “Tạo tải và mô phỏng”.</div></section>`;
+                const rows = cmp(L.P), r = rows.find(x => x.id == S.algo).r, n = L.P.length, ac = L.P.reduce((s, p) => s + p.cpu, 0) / n, ratio = r.wt / ac,
+                    st = ratio >= 4 && r.u > 90 ? ['Quá tải', 'over'] : ratio >= 1.5 ? ['Tải cao', 'hi'] : ['Bình thường', 'ok'], d = [];
+                d.push(`Hàng đợi sẵn sàng đạt tối đa ${r.mq} tiến trình. Thời gian chờ trung bình là ${r.wt.toFixed(1)}, gấp ${ratio.toFixed(1)} lần CPU Burst trung bình (${ac.toFixed(1)}).`);
+                const sv = r.m.reduce((a, b) => b.wt > a.wt ? b : a);
+                d.push(sv.wt >= 3 * r.wt && sv.wt - r.wt >= 5 ? `Dấu hiệu starvation: P${sv.pid} (ưu tiên ${sv.pr}) chờ ${sv.wt}, gấp ${(sv.wt / Math.max(r.wt, .1)).toFixed(1)} lần trung bình, trong khi ${NM[S.algo]} liên tục cấp CPU cho tiến trình khác.` : 'Chưa thấy tiến trình nào chờ lâu bất thường so với mức trung bình.');
+                const io = r.m.filter(x => x.type == 'IO'); if (io.length) { const ir = io.reduce((s, x) => s + x.rt, 0) / io.length; d.push(`Phản hồi trung bình của ${io.length} tiến trình tương tác là ${ir.toFixed(1)} đơn vị: ${ir > 3 ? 'chậm, nên thử thuật toán có chia lát thời gian.' : 'chấp nhận được.'}`) }
+                const best = k => rows.reduce((a, b) => b.r[k] < a.r[k] ? b : a), rec = [['Giảm thời gian chờ', 'wt', 'chờ TB'], ['Cải thiện phản hồi', 'rt', 'phản hồi TB'], ['Tăng tính công bằng', 'mw', 'chờ tối đa']].map(([g, k, l]) => { const b = best(k); return `<tr><td><b>${NM[b.id]}</b><td>${g}<td>${l} = ${b.r[k].toFixed(1)}, thấp nhất trong 7 thuật toán<td>${LIM[b.id]}` }).join('');
+                return h + `<h2>Giám sát tải (${SC.find(s => s[0] == L.sc)[1]})</h2><div class="bar">Xem theo ${ctrl('load')}</div>
+<div class="kpi"><div><b>${r.u.toFixed(1)}%</b>CPU mô phỏng</div><div><b>${r.mq}</b>Ready Queue tối đa</div><div><b>${r.wt.toFixed(1)}</b>TB thời gian chờ</div><div><b>${n}/${n}</b>Hoàn thành sau ${r.T} đơn vị</div><div><b>${r.thr.toFixed(3)}</b>Throughput</div><div><b class="${st[1]}">${st[0]}</b>Tình trạng tải</div></div>
+<div class="card"><h3 style="margin-top:0">Nhận xét nguyên nhân</h3><ul>${d.map(x => `<li>${x}`).join('')}</ul><p class="mu">Tình trạng tải được đánh giá từ tỷ lệ chờ/burst và mức bận CPU, không chỉ một ngưỡng cố định.</p></div>
+<h2>Thuật toán đề xuất</h2><div class="sc"><table><tr><th>Thuật toán<th>Mục tiêu<th>Cơ sở đề xuất<th>Hạn chế cần lưu ý</tr>${rec}</table></div>
+<p class="mu">Gợi ý ban đầu theo quy tắc (chưa chứng minh): ${HINT[L.sc]} Phần đề xuất ở trên dựa trên kết quả chạy thật cùng tập tiến trình với Quantum = ${S.q}; kết quả có thể khác khi đổi kịch bản hoặc tham số.</p>
+<h2>So sánh đầy đủ</h2>${cmpT(rows)}</section>`
+            },
+            about() { return `<section class="pg"><h1>Giới thiệu</h1><div class="card"><p>CPU Scheduling Simulator giúp sinh viên môn Hệ điều hành quan sát cách bộ lập lịch phân phối CPU. Luồng hoạt động: máy tính ảo → bộ tạo tiến trình → bộ lập lịch → phân tích kết quả.</p><p>Hệ thống hỗ trợ FCFS, SJF, SRTF, Priority, Round Robin, Multilevel Queue và Multilevel Feedback Queue trên mô hình CPU đơn lõi. Các ứng dụng trên desktop là ứng dụng giả lập; thông số tiến trình theo kịch bản, không đo từ CPU thật. I/O Burst hiện chỉ để hiển thị và chưa ảnh hưởng đến lịch chạy. Đây là môi trường học tập, không thay thế một hệ điều hành hoàn chỉnh.</p></div></section>` },
+            contact() { return `<section class="pg"><h1>Liên hệ</h1><p class="mu">Nhóm phát triển: CPU Scheduling Simulator. Email: <i>chưa cập nhật</i>.</p><form class="fm" onsubmit="event.preventDefault();$('#cm').textContent='Đây là biểu mẫu minh họa: chưa kết nối máy chủ nên nội dung chưa được gửi đi.'"><label>Họ tên<input></label><label>Email<input type="email"></label><label>Chủ đề<input></label><label>Nội dung<textarea rows="4"></textarea></label><button class="bt">Gửi góp ý</button><p id="cm" class="mu"></p></form></section>` }
+        };
+        const TABS = [['home', 'Trang chủ'], ['vm', 'Máy tính ảo'], ['alg', 'Thuật toán'], ['load', 'Phân tích tải CPU'], ['res', 'Kết quả'], ['about', 'Giới thiệu'], ['contact', 'Liên hệ']];
+        function go(v, k) {
+            S.view = v; const m = v == 'vm'; $('#vm').hidden = !m; $('#v').hidden = m; if (!m) $('#v').innerHTML = V[v](); else tbl();
+            $('#nav').innerHTML = `<span class="lg">${svg('chip', 30, 1.7)}<b>CPU Scheduling Simulator</b></span>` + TABS.map(t => `<button class="${t[0] == v ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join(''); if (!k) scrollTo(0, 0)
+        }
+        function mkLoad() {
+            S.sc = $('#sc').value; S.n = Math.min(40, Math.max(5, +$('#nn').value || 12)); const n = S.n, sc = S.sc, R = (a, b) => a + Math.floor(Math.random() * (b - a + 1)), P = [];
+            for (let i = 0; i < n; i++) {
+                let at, cpu, type = 'HH', pr = R(1, 5);
+                if (sc == 'burst') { at = R(0, 3); cpu = R(2, 8) } else if (sc == 'cpu') { at = R(0, n); cpu = R(10, 20); type = 'CPU' }
+                else if (sc == 'mixed') { at = R(0, n * 2); if (i % 2) { type = 'IO'; cpu = R(1, 4) } else { type = 'CPU'; cpu = R(8, 15) } }
+                else if (sc == 'inter') { if (i == 0) { at = 0; cpu = 20; type = 'CPU'; pr = 4 } else { at = R(0, Math.round(n * 1.5)); cpu = R(1, 3); type = 'IO'; pr = R(1, 3) } }
+                else if (sc == 'hiprio') { at = R(0, n * 2); if (i % 5 == 0) { pr = 5; cpu = R(5, 9) } else { pr = R(1, 2); cpu = R(3, 7) } }
+                else { if (i == 0) { at = 0; cpu = 4; pr = 9 } else { at = i * 3 - 2; cpu = R(4, 6); pr = 1 } }
+                P.push({ pid: i + 1, name: 'Tác vụ ' + (i + 1), type, at, cpu, io: type == 'IO' ? R(1, 4) : 0, pr })
+            }
+            S.load = { P, sc }; go('load', 1)
+        }
+        go('home');
+        $('#vm').innerHTML = `<section class="pg"><h1>Máy tính ảo</h1><p class="mu">Nhấp vào biểu tượng để mở cửa sổ ứng dụng; mỗi lần mở tạo một tiến trình mô phỏng. Bạn có thể kéo cửa sổ bằng thanh tiêu đề.</p>
+<div class="dk" id="dk">${APPS.map((a, i) => `<button class="ic" onclick="openApp(${i})"><span class="tile">${ico(a[1], 26)}</span>${a[0]}</button>`).join('')}<div class="tk"><div class="st"><i></i><i></i><i></i><i></i></div><div class="se">${svg('search', 16)}<span>Tìm kiếm...</span></div><div id="tbi"></div><div class="cl" id="clk"></div></div></div>
+<h2>Danh sách tiến trình</h2><form class="bar" onsubmit="return addP(event)"><input name="nm" placeholder="Tên tiến trình"><select name="ty"><option>CPU<option>IO<option selected>HH</select><input name="at" type="number" min="0" placeholder="Arrival" style="width:84px"><input name="cpu" type="number" min="1" placeholder="CPU" style="width:70px"><input name="io" type="number" min="0" placeholder="I/O" style="width:70px"><input name="pr" type="number" min="0" placeholder="Priority" style="width:96px"><button class="bt">Thêm tiến trình</button><button type="button" class="bt g" onclick="sample()">Nạp tập mẫu</button><button type="button" class="bt g" onclick="S.procs=[];S.fin=false;tbl()">Xóa tất cả</button></form>
+<div class="sc" id="pt"></div><div class="bar"><button class="bt g" onclick="go('alg')">Chọn thuật toán</button><button class="bt" onclick="go('res')">Chạy mô phỏng</button></div><p class="mu">Loại: CPU = CPU-bound, IO = I/O-bound, HH = hỗn hợp.</p></section>`;
+        clk(); setInterval(clk, 15000);
+    </script>
+</body>
+
+</html>
